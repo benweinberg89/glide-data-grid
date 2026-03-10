@@ -1195,16 +1195,34 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
     const gridRef = React.useRef<DataGridRef | null>(null);
 
     // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
+    const editorAnchorToCell = experimental?.editorAnchorToCell;
     React.useLayoutEffect(() => {
+        if (!editorAnchorToCell) return;
         const currentOverlay = overlayRef.current;
         if (currentOverlay === undefined) return;
         const newBounds = gridRef.current?.getBounds(currentOverlay.cell[0], currentOverlay.cell[1]);
         if (newBounds === undefined) return;
+
+        // Close the editor if the cell has scrolled fully out of the grid data area
+        if (editorAnchorToCell === "close-on-scroll-out") {
+            const gridRect = canvasRef.current?.getBoundingClientRect();
+            if (gridRect !== undefined) {
+                const dataTop = gridRect.top + totalHeaderHeight;
+                const cellRight = newBounds.x + newBounds.width;
+                const cellBottom = newBounds.y + newBounds.height;
+                if (cellRight <= gridRect.left || newBounds.x >= gridRect.right ||
+                    cellBottom <= dataTop || newBounds.y >= gridRect.bottom) {
+                    onFinishEditingRef.current(undefined, [0, 0]);
+                    return;
+                }
+            }
+        }
+
         const t = currentOverlay.target;
         if (newBounds.x !== t.x || newBounds.y !== t.y || newBounds.width !== t.width || newBounds.height !== t.height) {
             setOverlay(cv => (cv === undefined ? cv : { ...cv, target: newBounds }));
         }
-    }, [visibleRegion]);
+    }, [visibleRegion, editorAnchorToCell, totalHeaderHeight]);
 
     const focus = React.useCallback((immediate?: boolean) => {
         if (immediate === true) {
@@ -4348,8 +4366,8 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                             markdownDivCreateNode={markdownDivCreateNode}
                             isOutsideClick={isOutsideClick}
                             customEventTarget={experimental?.eventTarget}
-                            gridBounds={canvasRef.current?.getBoundingClientRect()}
-                            headerHeight={totalHeaderHeight}
+                            gridBounds={editorAnchorToCell ? canvasRef.current?.getBoundingClientRect() : undefined}
+                            headerHeight={editorAnchorToCell ? totalHeaderHeight : undefined}
                         />
                     </React.Suspense>
                 )}

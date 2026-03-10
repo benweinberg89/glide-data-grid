@@ -250,18 +250,35 @@ const DataEditorImpl = (p, forwardedRef) => {
     const cellYOffset = visibleRegion.y;
     const gridRef = React.useRef(null);
     // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
+    const editorAnchorToCell = experimental?.editorAnchorToCell;
     React.useLayoutEffect(() => {
+        if (!editorAnchorToCell)
+            return;
         const currentOverlay = overlayRef.current;
         if (currentOverlay === undefined)
             return;
         const newBounds = gridRef.current?.getBounds(currentOverlay.cell[0], currentOverlay.cell[1]);
         if (newBounds === undefined)
             return;
+        // Close the editor if the cell has scrolled fully out of the grid data area
+        if (editorAnchorToCell === "close-on-scroll-out") {
+            const gridRect = canvasRef.current?.getBoundingClientRect();
+            if (gridRect !== undefined) {
+                const dataTop = gridRect.top + totalHeaderHeight;
+                const cellRight = newBounds.x + newBounds.width;
+                const cellBottom = newBounds.y + newBounds.height;
+                if (cellRight <= gridRect.left || newBounds.x >= gridRect.right ||
+                    cellBottom <= dataTop || newBounds.y >= gridRect.bottom) {
+                    onFinishEditingRef.current(undefined, [0, 0]);
+                    return;
+                }
+            }
+        }
         const t = currentOverlay.target;
         if (newBounds.x !== t.x || newBounds.y !== t.y || newBounds.width !== t.width || newBounds.height !== t.height) {
             setOverlay(cv => (cv === undefined ? cv : { ...cv, target: newBounds }));
         }
-    }, [visibleRegion]);
+    }, [visibleRegion, editorAnchorToCell, totalHeaderHeight]);
     const focus = React.useCallback((immediate) => {
         if (immediate === true) {
             gridRef.current?.focus();
@@ -2868,7 +2885,7 @@ const DataEditorImpl = (p, forwardedRef) => {
             React.createElement(DataGridSearch, { fillHandle: fillHandle, drawFocusRing: drawFocusRing, experimental: experimental, fixedShadowX: fixedShadowX, fixedShadowY: fixedShadowY, getRowThemeOverride: getRowThemeOverride, headerIcons: headerIcons, imageWindowLoader: imageWindowLoader, initialSize: initialSize, isDraggable: isDraggable, onDragLeave: onDragLeave, onRowMoved: onRowMoved, overscrollX: overscrollX, overscrollY: overscrollY, preventDiagonalScrolling: preventDiagonalScrolling, rightElement: rightElement, rightElementProps: rightElementProps, smoothScrollX: smoothScrollX, smoothScrollY: smoothScrollY, className: className, enableGroups: enableGroups, onCanvasFocused: onCanvasFocused, onCanvasBlur: onFocusOut, canvasRef: canvasRef, onContextMenu: onContextMenu, theme: mergedTheme, cellXOffset: cellXOffset, cellYOffset: cellYOffset, accessibilityHeight: visibleRegion.height, onDragEnd: onDragEnd, columns: mangledCols, nonGrowWidth: nonGrowWidth, drawHeader: drawHeader, onColumnProposeMove: onColumnProposeMoveImpl, drawCell: drawCell, disabledRows: disabledRows, freezeColumns: mangledFreezeColumns, lockColumns: rowMarkerOffset, firstColAccessible: rowMarkerOffset === 0, getCellContent: getMangledCellContent, minColumnWidth: minColumnWidth, maxColumnWidth: maxColumnWidth, searchInputRef: searchInputRef, showSearch: showSearch, onSearchClose: onSearchClose, highlightRegions: highlightRegions, getCellsForSelection: getCellsForSelection, getGroupDetails: mangledGetGroupDetails, headerHeight: headerHeight, isFocused: isFocused, groupHeaderHeight: enableGroups ? groupHeaderHeight : 0, freezeTrailingRows: freezeTrailingRows + (showTrailingBlankRow && trailingRowOptions?.sticky === true ? 1 : 0), hasAppendRow: showTrailingBlankRow, onColumnResize: onColumnResize, onColumnResizeEnd: onColumnResizeEnd, onColumnResizeStart: onColumnResizeStart, onCellFocused: onCellFocused, onColumnMoved: onColumnMovedImpl, onDragStart: onDragStartImpl, onHeaderMenuClick: onHeaderMenuClickInner, onHeaderIndicatorClick: onHeaderIndicatorClickInner, onItemHovered: onItemHoveredImpl, isFilling: mouseState?.fillHandle === true, onMouseMove: onMouseMoveImpl, onKeyDown: onKeyDown, onKeyUp: onKeyUpIn, onMouseDown: onMouseDown, onMouseUp: onMouseUp, onDragOverCell: onDragOverCell, onDrop: onDrop, onSearchResultsChanged: onSearchResultsChanged, onVisibleRegionChanged: onVisibleRegionChangedImpl, clientSize: clientSize, rowHeight: rowHeight, searchResults: searchResults, searchValue: searchValue, onSearchValueChange: onSearchValueChange, rows: mangledRows, scrollRef: scrollRef, selection: gridSelection, translateX: visibleRegion.tx, translateY: visibleRegion.ty, verticalBorder: mangledVerticalBorder, gridRef: gridRef, getCellRenderer: getCellRenderer, resizeIndicator: resizeIndicator, setScrollDir: setScrollDir }),
             renameGroupNode,
             overlay !== undefined && (React.createElement(React.Suspense, { fallback: null },
-                React.createElement(DataGridOverlayEditor, { ...overlay, validateCell: validateCell, bloom: editorBloom, id: overlayID, getCellRenderer: getCellRenderer, className: experimental?.isSubGrid === true ? "click-outside-ignore" : undefined, provideEditor: provideEditor, imageEditorOverride: imageEditorOverride, portalElementRef: portalElementRef, onFinishEditing: onFinishEditing, markdownDivCreateNode: markdownDivCreateNode, isOutsideClick: isOutsideClick, customEventTarget: experimental?.eventTarget, gridBounds: canvasRef.current?.getBoundingClientRect(), headerHeight: totalHeaderHeight }))))));
+                React.createElement(DataGridOverlayEditor, { ...overlay, validateCell: validateCell, bloom: editorBloom, id: overlayID, getCellRenderer: getCellRenderer, className: experimental?.isSubGrid === true ? "click-outside-ignore" : undefined, provideEditor: provideEditor, imageEditorOverride: imageEditorOverride, portalElementRef: portalElementRef, onFinishEditing: onFinishEditing, markdownDivCreateNode: markdownDivCreateNode, isOutsideClick: isOutsideClick, customEventTarget: experimental?.eventTarget, gridBounds: editorAnchorToCell ? canvasRef.current?.getBoundingClientRect() : undefined, headerHeight: editorAnchorToCell ? totalHeaderHeight : undefined }))))));
 };
 /**
  * The primary component of Glide Data Grid.

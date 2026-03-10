@@ -235,23 +235,23 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
     const bloomX = bloom?.[0] ?? 1;
     const bloomY = bloom?.[1] ?? 1;
 
-    // Clip the overlay to the grid data area (below the header) so it doesn't spill outside during scroll
+    // Clip the overlay to the grid data area (below the header) so it doesn't spill outside during scroll.
+    // Always apply when gridBounds is available — the overlay can be wider/taller than the target cell
+    // (e.g. dropdowns, multi-select), so we can't check against target dimensions alone.
+    // Raw values can be negative when the overlay is fully inside the grid — negative inset expands
+    // the clip region beyond the element, allowing box-shadow/borders to render normally.
     let clipStyle: React.CSSProperties | undefined;
     if (gridBounds !== undefined) {
         const overlayX = target.x - bloomX;
         const overlayY = target.y - bloomY;
-        // Top clip boundary is below the header
         const dataTop = gridBounds.top + headerHeight;
-        const clipTop = Math.max(0, dataTop - overlayY);
-        const clipLeft = Math.max(0, gridBounds.left - overlayX);
-        // For right/bottom, use calc(100% - visible) since overlay size is dynamic
+        const clipTop = dataTop - overlayY;
+        const clipLeft = gridBounds.left - overlayX;
         const visibleWidth = gridBounds.right - overlayX;
         const visibleHeight = gridBounds.bottom - overlayY;
-        if (clipTop > 0 || clipLeft > 0 || visibleWidth < target.width + bloomX * 2 || visibleHeight < target.height + bloomY * 2) {
-            clipStyle = {
-                clipPath: `inset(${clipTop}px calc(100% - ${Math.max(0, visibleWidth)}px) calc(100% - ${Math.max(0, visibleHeight)}px) ${clipLeft}px)`,
-            };
-        }
+        clipStyle = {
+            clipPath: `inset(${clipTop}px calc(100% - ${visibleWidth}px) calc(100% - ${visibleHeight}px) ${clipLeft}px)`,
+        };
     }
 
     return createPortal(
