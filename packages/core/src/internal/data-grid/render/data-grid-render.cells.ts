@@ -107,7 +107,8 @@ export function drawCells(
     renderStateProvider: RenderStateProvider,
     getCellRenderer: GetCellRendererCallback,
     overrideCursor: (cursor: React.CSSProperties["cursor"]) => void,
-    minimumCellWidth: number
+    minimumCellWidth: number,
+    damageRects?: Rectangle[]
 ): Rectangle[] | undefined {
     let toDraw = damage?.size ?? Number.MAX_SAFE_INTEGER;
     const frameTime = performance.now();
@@ -333,24 +334,24 @@ export function drawCells(
 
                     let didDamageClip = false;
                     if (damage !== undefined) {
-                        // we want to clip each cell individually rather than form a super clip region. The reason for
-                        // this is passing too many clip regions to the GPU at once can cause a performance hit. This
-                        // allows us to damage a large number of cells at once without issue.
-                        const top = drawY + 1;
+                        // Clip to full cell bounds during damage repaints
+                        const top = drawY;
                         const bottom = isSticky
-                            ? top + rh - 1
-                            : Math.min(top + rh - 1, height - freezeTrailingRowsHeight);
+                            ? top + rh
+                            : Math.min(top + rh, height - freezeTrailingRowsHeight);
                         const h = bottom - top;
 
-                        // however, not clipping at all is even better. We want to clip if we are the left most col
-                        // or overlapping the bottom clip area.
-                        if (h !== rh - 1 || cellX + 1 <= clipX) {
-                            didDamageClip = true;
-                            ctx.save();
-                            ctx.beginPath();
-                            ctx.rect(cellX + 1, top, cellWidth - 1, h);
-                            ctx.clip();
-                        }
+                        didDamageClip = true;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(cellX, top, cellWidth, h);
+                        ctx.clip();
+
+                        // Track damage rects for grid line restoration
+                        damageRects?.push({ x: cellX, y: top, width: cellWidth, height: h });
+
+                        // Clear before fill to support translucent backgrounds
+                        ctx.clearRect(cellX, top, cellWidth, h);
 
                         // we also need to make sure to wipe the contents. Since the fill can do that lets repurpose
                         // that call to avoid an extra draw call.
@@ -365,14 +366,7 @@ export function drawCells(
                             prepResult.fillStyle = fill;
                         }
                         if (damage !== undefined) {
-                            // this accounts for the fill handle outline being drawn inset on these cells. We do this
-                            // because technically the bottom right corner of the outline are on other cells.
-                            ctx.fillRect(
-                                cellX + 1,
-                                drawY + 1,
-                                cellWidth - (isLastColumn ? 2 : 1),
-                                rh - (isLastRow ? 2 : 1)
-                            );
+                            ctx.fillRect(cellX, drawY, cellWidth, rh);
                         } else {
                             ctx.fillRect(cellX, drawY, cellWidth, rh);
                         }
