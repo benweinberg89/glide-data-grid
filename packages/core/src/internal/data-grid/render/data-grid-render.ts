@@ -258,12 +258,17 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
 
     const effectiveCols = getEffectiveColumns(mappedColumns, cellXOffset, width, dragAndDropState, translateX);
 
+    // Suppress focus ring and highlight regions during column drag-and-drop
+    const isDraggingCol = dragAndDropState !== undefined;
+    const drawFocusEffective = drawFocus && !isDraggingCol;
+    const highlightRegionsEffective = isDraggingCol ? undefined : highlightRegions;
+
     let drawRegions: Rectangle[] = [];
 
-    const mustDrawFocusOnHeader = drawFocus && selection.current?.cell[1] === cellYOffset && translateY === 0;
+    const mustDrawFocusOnHeader = drawFocusEffective && selection.current?.cell[1] === cellYOffset && translateY === 0;
     let mustDrawHighlightRingsOnHeader = false;
-    if (highlightRegions !== undefined) {
-        for (const r of highlightRegions) {
+    if (highlightRegionsEffective !== undefined) {
+        for (const r of highlightRegionsEffective) {
             if (r.style !== "no-outline" && r.range.y === cellYOffset && translateY === 0) {
                 mustDrawHighlightRingsOnHeader = true;
                 break;
@@ -338,7 +343,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
                 rowHeight,
                 freezeTrailingRows,
                 rows,
-                highlightRegions,
+                highlightRegionsEffective,
                 theme
             );
         }
@@ -422,14 +427,14 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
                 getRowThemeOverride,
                 disabledRows,
                 isFocused,
-                drawFocus,
+                drawFocusEffective,
                 freezeTrailingRows,
                 hasAppendRow,
                 drawRegions,
                 damage,
                 selection,
                 prelightCells,
-                highlightRegions,
+                highlightRegionsEffective,
                 imageLoader,
                 spriteManager,
                 hoverValues,
@@ -493,7 +498,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
                 rowHeight,
                 freezeTrailingRows,
                 rows,
-                highlightRegions,
+                highlightRegionsEffective,
                 theme
             );
 
@@ -501,7 +506,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
 
             if (
                 (fillHandle !== false && fillHandle !== undefined) &&
-                drawFocus &&
+                drawFocusEffective &&
                 selectionCurrent !== undefined &&
                 damage.has(rectBottomRight(selectionCurrent.range))
             ) {
@@ -638,12 +643,12 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         rowHeight,
         freezeTrailingRows,
         rows,
-        highlightRegions,
+        highlightRegionsEffective,
         theme
     );
 
     // the overdraw may have nuked out our focus ring right edge.
-    const focusRedraw = drawFocus
+    const focusRedraw = drawFocusEffective
         ? drawFillHandle(
               targetCtx,
               width,
@@ -698,14 +703,14 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         getRowThemeOverride,
         disabledRows,
         isFocused,
-        drawFocus,
+        drawFocusEffective,
         freezeTrailingRows,
         hasAppendRow,
         drawRegions,
         damage,
         selection,
         prelightCells,
-        highlightRegions,
+        highlightRegionsEffective,
         imageLoader,
         spriteManager,
         hoverValues,
