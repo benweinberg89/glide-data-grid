@@ -178,6 +178,33 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
 
     const { ref, style: stayOnScreenStyle } = useStayOnScreen();
 
+    // Flip detection: measure the editor and flip it above the cell when it overflows the grid bottom.
+    const editorElRef = React.useRef<HTMLElement | null>(null);
+    const [flipped, setFlipped] = React.useState(false);
+
+    const combinedRef = React.useCallback(
+        (el: HTMLElement | null) => {
+            ref(el);
+            editorElRef.current = el;
+        },
+        [ref]
+    );
+
+    React.useLayoutEffect(() => {
+        if (gridBounds === undefined || editorElRef.current === null) {
+            setFlipped(false);
+            return;
+        }
+        // Use offsetHeight (layout size, unaffected by transforms) so the decision
+        // is stable regardless of whether we're currently flipped or not.
+        const editorHeight = editorElRef.current.offsetHeight;
+        const bloomYVal = bloom?.[1] ?? 1;
+        const normalBottom = target.y - bloomYVal + editorHeight;
+        const spaceBelow = gridBounds.bottom - (target.y + target.height);
+        const spaceAbove = target.y - (gridBounds.top + headerHeight);
+        setFlipped(normalBottom > gridBounds.bottom + 1 && spaceAbove > spaceBelow);
+    }, [gridBounds, target, headerHeight, bloom]);
+
     let pad = true;
     let editor: React.ReactNode;
     let style = true;
@@ -239,6 +266,22 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
     const bloomX = bloom?.[0] ?? 1;
     const bloomY = bloom?.[1] ?? 1;
 
+    const overlayX = target.x - bloomX;
+    const normalOverlayY = target.y - bloomY;
+    const flippedOverlayY = target.y + target.height + bloomY;
+    const overlayY = flipped ? flippedOverlayY : normalOverlayY;
+
+    // When flipped, position the CSS box at the cell bottom and shift it up by its own height
+    // via translateY(-100%). Constrain max-height to the space above (down to the data area top).
+    let flipStyle: React.CSSProperties | undefined;
+    if (flipped && gridBounds !== undefined) {
+        const dataTop = gridBounds.top + headerHeight + 1;
+        flipStyle = {
+            transform: "translateY(-100%)",
+            maxHeight: flippedOverlayY - dataTop,
+        };
+    }
+
     // Clip the overlay to the grid data area (below the header) so it doesn't spill outside during scroll.
     // Always apply when gridBounds is available — the overlay can be wider/taller than the target cell
     // (e.g. dropdowns, multi-select), so we can't check against target dimensions alone.
@@ -246,16 +289,25 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
     // the clip region beyond the element, allowing box-shadow/borders to render normally.
     let clipStyle: React.CSSProperties | undefined;
     if (gridBounds !== undefined) {
-        const overlayX = target.x - bloomX;
-        const overlayY = target.y - bloomY;
         const dataTop = gridBounds.top + headerHeight + 1; // +1 for header bottom border pixel
-        const clipTop = dataTop - overlayY;
         const clipLeft = gridBounds.left - overlayX;
         const visibleWidth = gridBounds.right - overlayX;
-        const visibleHeight = gridBounds.bottom - overlayY;
-        clipStyle = {
-            clipPath: `inset(${clipTop}px calc(100% - ${visibleWidth}px) calc(100% - ${visibleHeight}px) ${clipLeft}px)`,
-        };
+
+        if (flipped) {
+            // With translateY(-100%), clip-path operates on the untransformed box.
+            // We compute insets that produce correct visual clipping after the transform.
+            const clipTop = `calc(100% - ${flippedOverlayY - dataTop}px)`;
+            const clipBottom = flippedOverlayY - gridBounds.bottom;
+            clipStyle = {
+                clipPath: `inset(${clipTop} calc(100% - ${visibleWidth}px) ${clipBottom}px ${clipLeft}px)`,
+            };
+        } else {
+            const clipTop = dataTop - overlayY;
+            const visibleHeight = gridBounds.bottom - overlayY;
+            clipStyle = {
+                clipPath: `inset(${clipTop}px calc(100% - ${visibleWidth}px) calc(100% - ${visibleHeight}px) ${clipLeft}px)`,
+            };
+        }
     }
 
     return createPortal(
@@ -267,13 +319,13 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
                 isOutsideClick={isOutsideClick}
                 customEventTarget={customEventTarget}>
                 <DataGridOverlayEditorStyle
-                    ref={ref}
+                    ref={combinedRef}
                     id={id}
                     className={classWrap}
-                    style={{...styleOverride, ...clipStyle}}
+                    style={{...styleOverride, ...clipStyle, ...flipStyle}}
                     as={useLabel === true ? "label" : undefined}
-                    targetX={target.x - bloomX}
-                    targetY={target.y - bloomY}
+                    targetX={overlayX}
+                    targetY={overlayY}
                     targetWidth={target.width + bloomX * 2}
                     targetHeight={target.height + bloomY * 2}>
                     <div className="gdg-clip-region" onKeyDown={onKeyDown}>
