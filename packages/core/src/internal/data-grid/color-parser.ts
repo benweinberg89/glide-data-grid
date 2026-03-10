@@ -82,8 +82,10 @@ export function blend(color: string, background: string | undefined): string {
     if (background === undefined) return color;
     const [r, g, b, a] = parseToRgba(color);
     if (a === 1) return color;
+    if (a === 0) return color;
     const [br, bg, bb, ba] = parseToRgba(background);
     const ao = a + ba * (1 - a);
+    if (ao === 0) return "rgba(0, 0, 0, 0)";
     // (xaA + xaB·(1−aA))/aR
     const ro = (a * r + ba * br * (1 - a)) / ao;
     const go = (a * g + ba * bg * (1 - a)) / ao;
