@@ -79,4 +79,3 @@ export interface UseRowGroupingInnerResult {
     readonly getRowThemeOverride: DataGridProps["getRowThemeOverride"];
 }
 export declare function useRowGroupingInner(options: RowGroupingOptions | undefined, rows: number, rowHeightIn: NonNullable<DataEditorProps["rowHeight"]>, getRowThemeOverrideIn: DataEditorProps["getRowThemeOverride"]): UseRowGroupingInnerResult;
-//# sourceMappingURL=row-grouping.d.ts.map
