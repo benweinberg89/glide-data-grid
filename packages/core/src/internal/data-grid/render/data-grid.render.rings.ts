@@ -87,6 +87,7 @@ export function drawHighlightRings(
             }
             return {
                 color: h.color,
+                label: h.label,
                 style,
                 clip: arg.clip,
                 rect: hugRectToTarget(
@@ -146,6 +147,62 @@ export function drawHighlightRings(
 
         if (dashed) {
             ctx.setLineDash([]);
+        }
+
+        // Draw labels (e.g. collaborator cursor names) on highlight regions
+        // Group labels by cell position so multiple labels tile horizontally
+        const labelsByCell = new Map<string, { labels: { text: string; color: string }[]; x: number; y: number; w: number }>();
+        for (const dr of drawRects) {
+            for (const s of dr) {
+                if (s?.rect === undefined || s.label === undefined || s.label === "") continue;
+                const key = `${s.rect.x},${s.rect.y},${s.rect.width}`;
+                let entry = labelsByCell.get(key);
+                if (entry === undefined) {
+                    entry = { labels: [], x: s.rect.x, y: s.rect.y, w: s.rect.width };
+                    labelsByCell.set(key, entry);
+                }
+                entry.labels.push({ text: s.label, color: s.color });
+            }
+        }
+
+        if (labelsByCell.size > 0) {
+            const pillHeight = 16;
+            const pillPadX = 4;
+            const pillGap = 2;
+            const maxLabelLen = 8;
+            ctx.font = "bold 10px sans-serif";
+            ctx.textBaseline = "middle";
+
+            for (const entry of labelsByCell.values()) {
+                let drawX = entry.x + entry.w; // start at top-right of cell
+                const drawY = entry.y;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(entry.x, drawY, entry.w, pillHeight + 2);
+                ctx.clip();
+
+                for (let i = entry.labels.length - 1; i >= 0; i--) {
+                    const lbl = entry.labels[i];
+                    const truncated = lbl.text.length > maxLabelLen ? lbl.text.slice(0, maxLabelLen) : lbl.text;
+                    const textW = ctx.measureText(truncated).width;
+                    const pillW = textW + pillPadX * 2;
+
+                    drawX -= pillW + pillGap;
+
+                    // Background pill
+                    ctx.fillStyle = withAlpha(lbl.color, 1);
+                    ctx.beginPath();
+                    ctx.roundRect(drawX, drawY, pillW, pillHeight, 3);
+                    ctx.fill();
+
+                    // White text
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.fillText(truncated, drawX + pillPadX, drawY + pillHeight / 2);
+                }
+
+                ctx.restore();
+            }
         }
     };
 
