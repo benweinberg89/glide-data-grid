@@ -404,6 +404,8 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         ]);
 
         const doDamage = (ctx: CanvasRenderingContext2D) => {
+            const damageRects: Rectangle[] = [];
+
             drawCells(
                 ctx,
                 effectiveCols,
@@ -439,7 +441,60 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
                 renderStateProvider,
                 getCellRenderer,
                 overrideCursor,
-                minimumCellWidth
+                minimumCellWidth,
+                damageRects
+            );
+
+            // Restore grid lines over damaged cells
+            if (damageRects.length > 0) {
+                ctx.save();
+                ctx.beginPath();
+                for (const r of damageRects) {
+                    ctx.rect(r.x, r.y, r.width, r.height);
+                }
+                ctx.clip();
+
+                drawGridLines(
+                    ctx,
+                    effectiveCols,
+                    cellYOffset,
+                    translateX,
+                    translateY,
+                    width,
+                    height,
+                    undefined,
+                    undefined,
+                    groupHeaderHeight,
+                    totalHeaderHeight,
+                    getRowHeight,
+                    getRowThemeOverride,
+                    verticalBorder,
+                    freezeTrailingRows,
+                    rows,
+                    theme
+                );
+
+                ctx.restore();
+            }
+
+            // Redraw highlight rings over damaged cells
+            drawHighlightRings(
+                ctx,
+                width,
+                height,
+                cellXOffset,
+                cellYOffset,
+                translateX,
+                translateY,
+                mappedColumns,
+                freezeColumns,
+                headerHeight,
+                groupHeaderHeight,
+                rowHeight,
+                freezeTrailingRows,
+                rows,
+                highlightRegions,
+                theme
             );
 
             const selectionCurrent = selection.current;
