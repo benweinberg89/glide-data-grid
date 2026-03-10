@@ -43,6 +43,7 @@ export function drawGridHeaders(
     const totalHeaderHeight = headerHeight + groupHeaderHeight;
     if (totalHeaderHeight <= 0) return;
 
+    ctx.clearRect(0, 0, width, totalHeaderHeight);
     ctx.fillStyle = outerTheme.bgHeader;
     ctx.fillRect(0, 0, width, totalHeaderHeight);
 

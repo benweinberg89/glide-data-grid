@@ -344,6 +344,14 @@ export function drawGridLines(
         let y = totalHeaderHeight + 0.5;
         let row = cellYOffset;
         const target = freezeY;
+
+        // Skip the first horizontal line at the header/body boundary —
+        // the header overlay canvas draws its own bottom border
+        if (totalHeaderHeight > 0) {
+            y += getRowHeight(row);
+            row++;
+        }
+
         while (y + translateY < target) {
             const ty = y + translateY;
             if (ty >= minY && ty <= maxY - 1) {

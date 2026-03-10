@@ -271,6 +271,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         }
     }
     const drawHeaderTexture = () => {
+        overlayCtx.clearRect(0, 0, width, overlayHeight);
         drawGridHeaders(
             overlayCtx,
             effectiveCols,
@@ -317,10 +318,8 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         overlayCtx.beginPath();
         overlayCtx.moveTo(0, overlayHeight - 0.5);
         overlayCtx.lineTo(width, overlayHeight - 0.5);
-        overlayCtx.strokeStyle = blend(
-            theme.headerBottomBorderColor ?? theme.horizontalBorderColor ?? theme.borderColor,
-            theme.bgHeader
-        );
+        overlayCtx.strokeStyle =
+            theme.headerBottomBorderColor ?? theme.horizontalBorderColor ?? theme.borderColor;
         overlayCtx.stroke();
 
         if (mustDrawHighlightRingsOnHeader) {
