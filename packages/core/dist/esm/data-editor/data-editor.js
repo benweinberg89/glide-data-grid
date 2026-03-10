@@ -264,7 +264,7 @@ const DataEditorImpl = (p, forwardedRef) => {
         if (editorAnchorToCell === "close-on-scroll-out") {
             const gridRect = canvasRef.current?.getBoundingClientRect();
             if (gridRect !== undefined) {
-                const dataTop = gridRect.top + totalHeaderHeight;
+                const dataTop = gridRect.top + totalHeaderHeight + 1; // +1 for header bottom border pixel
                 const cellRight = newBounds.x + newBounds.width;
                 const cellBottom = newBounds.y + newBounds.height;
                 if (cellRight <= gridRect.left || newBounds.x >= gridRect.right ||

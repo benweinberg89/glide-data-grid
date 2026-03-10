@@ -148,6 +148,11 @@ export function drawGrid(arg, lastArg) {
     }
     const drawHeaderTexture = () => {
         overlayCtx.clearRect(0, 0, width, overlayHeight);
+        // Fill the full overlay height with an opaque background so that accent-colored
+        // pixels on the data canvas beneath (e.g. highlight rings near the header boundary)
+        // cannot bleed through semi-transparent anti-aliased rows at the border stroke.
+        overlayCtx.fillStyle = theme.bgHeader;
+        overlayCtx.fillRect(0, 0, width, overlayHeight);
         drawGridHeaders(overlayCtx, effectiveCols, enableGroups, hoverInfo, width, translateX, headerHeight, groupHeaderHeight, dragAndDropState, isResizing, selection, theme, spriteManager, hoverValues, verticalBorder, getGroupDetails, damage, drawHeaderCallback, touchMode);
         drawGridLines(overlayCtx, effectiveCols, cellYOffset, translateX, translateY, width, height, undefined, undefined, groupHeaderHeight, totalHeaderHeight, getRowHeight, getRowThemeOverride, verticalBorder, freezeTrailingRows, rows, theme, true);
         overlayCtx.beginPath();

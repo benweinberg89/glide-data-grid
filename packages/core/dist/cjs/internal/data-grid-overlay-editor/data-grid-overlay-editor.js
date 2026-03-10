@@ -124,7 +124,7 @@ const DataGridOverlayEditor = p => {
     if (gridBounds !== undefined) {
         const overlayX = target.x - bloomX;
         const overlayY = target.y - bloomY;
-        const dataTop = gridBounds.top + headerHeight;
+        const dataTop = gridBounds.top + headerHeight + 1; // +1 for header bottom border pixel
         const clipTop = dataTop - overlayY;
         const clipLeft = gridBounds.left - overlayX;
         const visibleWidth = gridBounds.right - overlayX;
