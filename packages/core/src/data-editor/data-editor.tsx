@@ -2209,7 +2209,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                 }
                 const inputCol = columns[col - rowMarkerOffset];
                 const offscreen = document.createElement("canvas");
-                const ctx = offscreen.getContext("2d", { alpha: false });
+                const ctx = offscreen.getContext("2d", { alpha: true });
                 if (ctx !== null) {
                     ctx.font = mergedTheme.baseFontFull;
                     const newCol = measureColumn(

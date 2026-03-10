@@ -743,7 +743,7 @@ const DataGrid: React.ForwardRefRenderFunction<DataGridRef, DataGridProps> = (p,
         b.style["display"] = "none";
         b.style["opacity"] = "0";
         b.style["position"] = "fixed";
-        return [a.getContext("2d", { alpha: false }), b.getContext("2d", { alpha: false })];
+        return [a.getContext("2d", { alpha: true }), b.getContext("2d", { alpha: true })];
     }, []);
 
     React.useLayoutEffect(() => {
@@ -771,13 +771,13 @@ const DataGrid: React.ForwardRefRenderFunction<DataGridRef, DataGridProps> = (p,
         if (canvas === null || overlay === null) return;
 
         if (canvasCtx.current === null) {
-            canvasCtx.current = canvas.getContext("2d", { alpha: false });
+            canvasCtx.current = canvas.getContext("2d", { alpha: true });
             canvas.width = 0;
             canvas.height = 0;
         }
 
         if (overlayCtx.current === null) {
-            overlayCtx.current = overlay.getContext("2d", { alpha: false });
+            overlayCtx.current = overlay.getContext("2d", { alpha: true });
             overlay.width = 0;
             overlay.height = 0;
         }

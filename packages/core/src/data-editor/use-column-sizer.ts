@@ -102,7 +102,7 @@ export function useColumnSizer(
         offscreen.style["display"] = "none";
         offscreen.style["opacity"] = "0";
         offscreen.style["position"] = "fixed";
-        return [offscreen, offscreen.getContext("2d", { alpha: false })];
+        return [offscreen, offscreen.getContext("2d", { alpha: true })];
     }, []);
 
     React.useLayoutEffect(() => {

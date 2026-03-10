@@ -1,5 +1,4 @@
 import React from "react";
-import { blend } from "../internal/data-grid/color-parser.js";
 
 // theme variable precidence
 
@@ -176,9 +175,7 @@ export function mergeAndRealizeTheme(theme: Theme, ...overlays: Partial<Theme | 
             for (const key in overlay) {
                 // eslint-disable-next-line no-prototype-builtins
                 if (overlay.hasOwnProperty(key)) {
-                    if (key === "bgCell") {
-                        merged[key] = blend(overlay[key] as string, merged[key]);
-                    } else {
+                    {
                         merged[key] = (overlay as any)[key];
                     }
                 }

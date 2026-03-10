@@ -3,7 +3,7 @@
 import { type Rectangle } from "../data-grid-types.js";
 import { CellSet } from "../cell-set.js";
 import { getEffectiveColumns, type MappedGridColumn, rectBottomRight } from "./data-grid-lib.js";
-import { blend } from "../color-parser.js";
+import { blend, parseToRgba } from "../color-parser.js";
 import { assert } from "../../../common/support.js";
 import type { DrawGridArg } from "./draw-grid-arg.js";
 import { walkColumns, walkGroups, walkRowsInCol } from "./data-grid-render.walk.js";
@@ -168,11 +168,14 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         resizeIndicator,
     } = arg;
     if (width === 0 || height === 0) return;
-    const doubleBuffer = renderStrategy === "double-buffer";
     const dpr = Math.min(maxScaleFactor, Math.ceil(window.devicePixelRatio ?? 1));
 
+    // Disable double-buffering when bgCell is translucent to avoid alpha doubling
+    // from buffer-to-canvas compositing
+    const bgCellAlpha = parseToRgba(theme.bgCell)[3];
+    const doubleBuffer = bgCellAlpha >= 1 && renderStrategy === "double-buffer";
     // if we are double buffering we need to make sure we can blit. If we can't we need to redraw the whole thing
-    const canBlit = renderStrategy !== "direct" && computeCanBlit(arg, lastArg);
+    const canBlit = bgCellAlpha >= 1 && renderStrategy !== "direct" && computeCanBlit(arg, lastArg);
 
     const canvas = canvasCtx.canvas;
 
@@ -615,9 +618,13 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
             targetCtx.rect(r.x, r.y, r.width, r.height);
         }
         targetCtx.clip();
+        for (const r of drawRegions) {
+            targetCtx.clearRect(r.x, r.y, r.width, r.height);
+        }
         targetCtx.fill();
         targetCtx.beginPath();
     } else {
+        targetCtx.clearRect(0, 0, width, height);
         targetCtx.fillRect(0, 0, width, height);
     }
 
@@ -748,8 +755,11 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
     }
 
     if (mainCtx !== null) {
-        mainCtx.fillStyle = theme.bgCell;
-        mainCtx.fillRect(0, 0, width, height);
+        mainCtx.clearRect(0, 0, width, height);
+        if (bgCellAlpha >= 1) {
+            mainCtx.fillStyle = theme.bgCell;
+            mainCtx.fillRect(0, 0, width, height);
+        }
         mainCtx.drawImage(targetCtx.canvas, 0, 0);
     }
 
