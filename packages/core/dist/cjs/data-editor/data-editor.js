@@ -70,6 +70,8 @@ export const emptyGridSelection = {
 const DataEditorImpl = (p, forwardedRef) => {
     const [gridSelectionInner, setGridSelectionInner] = React.useState(emptyGridSelection);
     const [overlay, setOverlay] = React.useState();
+    const overlayRef = React.useRef(overlay);
+    overlayRef.current = overlay;
     const searchInputRef = React.useRef(null);
     const canvasRef = React.useRef(null);
     const [mouseState, setMouseState] = React.useState();
@@ -247,6 +249,19 @@ const DataEditorImpl = (p, forwardedRef) => {
     const cellXOffset = visibleRegion.x + rowMarkerOffset;
     const cellYOffset = visibleRegion.y;
     const gridRef = React.useRef(null);
+    // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
+    React.useLayoutEffect(() => {
+        const currentOverlay = overlayRef.current;
+        if (currentOverlay === undefined)
+            return;
+        const newBounds = gridRef.current?.getBounds(currentOverlay.cell[0], currentOverlay.cell[1]);
+        if (newBounds === undefined)
+            return;
+        const t = currentOverlay.target;
+        if (newBounds.x !== t.x || newBounds.y !== t.y || newBounds.width !== t.width || newBounds.height !== t.height) {
+            setOverlay(cv => (cv === undefined ? cv : { ...cv, target: newBounds }));
+        }
+    }, [visibleRegion]);
     const focus = React.useCallback((immediate) => {
         if (immediate === true) {
             gridRef.current?.focus();
@@ -1889,6 +1904,8 @@ const DataEditorImpl = (p, forwardedRef) => {
         onColumnAppended,
         getCustomNewRowTargetColumn,
     ]);
+    const onFinishEditingRef = React.useRef(onFinishEditing);
+    onFinishEditingRef.current = onFinishEditing;
     const overlayID = React.useMemo(() => {
         return `gdg-overlay-${idCounter++}`;
     }, []);
@@ -2851,7 +2868,7 @@ const DataEditorImpl = (p, forwardedRef) => {
             React.createElement(DataGridSearch, { fillHandle: fillHandle, drawFocusRing: drawFocusRing, experimental: experimental, fixedShadowX: fixedShadowX, fixedShadowY: fixedShadowY, getRowThemeOverride: getRowThemeOverride, headerIcons: headerIcons, imageWindowLoader: imageWindowLoader, initialSize: initialSize, isDraggable: isDraggable, onDragLeave: onDragLeave, onRowMoved: onRowMoved, overscrollX: overscrollX, overscrollY: overscrollY, preventDiagonalScrolling: preventDiagonalScrolling, rightElement: rightElement, rightElementProps: rightElementProps, smoothScrollX: smoothScrollX, smoothScrollY: smoothScrollY, className: className, enableGroups: enableGroups, onCanvasFocused: onCanvasFocused, onCanvasBlur: onFocusOut, canvasRef: canvasRef, onContextMenu: onContextMenu, theme: mergedTheme, cellXOffset: cellXOffset, cellYOffset: cellYOffset, accessibilityHeight: visibleRegion.height, onDragEnd: onDragEnd, columns: mangledCols, nonGrowWidth: nonGrowWidth, drawHeader: drawHeader, onColumnProposeMove: onColumnProposeMoveImpl, drawCell: drawCell, disabledRows: disabledRows, freezeColumns: mangledFreezeColumns, lockColumns: rowMarkerOffset, firstColAccessible: rowMarkerOffset === 0, getCellContent: getMangledCellContent, minColumnWidth: minColumnWidth, maxColumnWidth: maxColumnWidth, searchInputRef: searchInputRef, showSearch: showSearch, onSearchClose: onSearchClose, highlightRegions: highlightRegions, getCellsForSelection: getCellsForSelection, getGroupDetails: mangledGetGroupDetails, headerHeight: headerHeight, isFocused: isFocused, groupHeaderHeight: enableGroups ? groupHeaderHeight : 0, freezeTrailingRows: freezeTrailingRows + (showTrailingBlankRow && trailingRowOptions?.sticky === true ? 1 : 0), hasAppendRow: showTrailingBlankRow, onColumnResize: onColumnResize, onColumnResizeEnd: onColumnResizeEnd, onColumnResizeStart: onColumnResizeStart, onCellFocused: onCellFocused, onColumnMoved: onColumnMovedImpl, onDragStart: onDragStartImpl, onHeaderMenuClick: onHeaderMenuClickInner, onHeaderIndicatorClick: onHeaderIndicatorClickInner, onItemHovered: onItemHoveredImpl, isFilling: mouseState?.fillHandle === true, onMouseMove: onMouseMoveImpl, onKeyDown: onKeyDown, onKeyUp: onKeyUpIn, onMouseDown: onMouseDown, onMouseUp: onMouseUp, onDragOverCell: onDragOverCell, onDrop: onDrop, onSearchResultsChanged: onSearchResultsChanged, onVisibleRegionChanged: onVisibleRegionChangedImpl, clientSize: clientSize, rowHeight: rowHeight, searchResults: searchResults, searchValue: searchValue, onSearchValueChange: onSearchValueChange, rows: mangledRows, scrollRef: scrollRef, selection: gridSelection, translateX: visibleRegion.tx, translateY: visibleRegion.ty, verticalBorder: mangledVerticalBorder, gridRef: gridRef, getCellRenderer: getCellRenderer, resizeIndicator: resizeIndicator, setScrollDir: setScrollDir }),
             renameGroupNode,
             overlay !== undefined && (React.createElement(React.Suspense, { fallback: null },
-                React.createElement(DataGridOverlayEditor, { ...overlay, validateCell: validateCell, bloom: editorBloom, id: overlayID, getCellRenderer: getCellRenderer, className: experimental?.isSubGrid === true ? "click-outside-ignore" : undefined, provideEditor: provideEditor, imageEditorOverride: imageEditorOverride, portalElementRef: portalElementRef, onFinishEditing: onFinishEditing, markdownDivCreateNode: markdownDivCreateNode, isOutsideClick: isOutsideClick, customEventTarget: experimental?.eventTarget }))))));
+                React.createElement(DataGridOverlayEditor, { ...overlay, validateCell: validateCell, bloom: editorBloom, id: overlayID, getCellRenderer: getCellRenderer, className: experimental?.isSubGrid === true ? "click-outside-ignore" : undefined, provideEditor: provideEditor, imageEditorOverride: imageEditorOverride, portalElementRef: portalElementRef, onFinishEditing: onFinishEditing, markdownDivCreateNode: markdownDivCreateNode, isOutsideClick: isOutsideClick, customEventTarget: experimental?.eventTarget, gridBounds: canvasRef.current?.getBoundingClientRect(), headerHeight: totalHeaderHeight }))))));
 };
 /**
  * The primary component of Glide Data Grid.

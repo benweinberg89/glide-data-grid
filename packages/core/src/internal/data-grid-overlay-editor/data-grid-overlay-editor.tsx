@@ -49,6 +49,8 @@ interface DataGridOverlayEditorProps {
     ) => boolean | ValidatedGridCell;
     readonly isOutsideClick?: (e: MouseEvent | TouchEvent) => boolean;
     readonly customEventTarget?: HTMLElement | Window | Document;
+    readonly gridBounds?: DOMRect;
+    readonly headerHeight?: number;
 }
 
 const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps> = p => {
@@ -73,6 +75,8 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
         isOutsideClick,
         customEventTarget,
         activation,
+        gridBounds,
+        headerHeight = 0,
     } = p;
 
     const [tempValue, setTempValueRaw] = React.useState<GridCell | undefined>(forceEditMode ? content : undefined);
@@ -231,6 +235,25 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
     const bloomX = bloom?.[0] ?? 1;
     const bloomY = bloom?.[1] ?? 1;
 
+    // Clip the overlay to the grid data area (below the header) so it doesn't spill outside during scroll
+    let clipStyle: React.CSSProperties | undefined;
+    if (gridBounds !== undefined) {
+        const overlayX = target.x - bloomX;
+        const overlayY = target.y - bloomY;
+        // Top clip boundary is below the header
+        const dataTop = gridBounds.top + headerHeight;
+        const clipTop = Math.max(0, dataTop - overlayY);
+        const clipLeft = Math.max(0, gridBounds.left - overlayX);
+        // For right/bottom, use calc(100% - visible) since overlay size is dynamic
+        const visibleWidth = gridBounds.right - overlayX;
+        const visibleHeight = gridBounds.bottom - overlayY;
+        if (clipTop > 0 || clipLeft > 0 || visibleWidth < target.width + bloomX * 2 || visibleHeight < target.height + bloomY * 2) {
+            clipStyle = {
+                clipPath: `inset(${clipTop}px calc(100% - ${Math.max(0, visibleWidth)}px) calc(100% - ${Math.max(0, visibleHeight)}px) ${clipLeft}px)`,
+            };
+        }
+    }
+
     return createPortal(
         <ThemeContext.Provider value={theme}>
             <ClickOutsideContainer
@@ -243,7 +266,7 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
                     ref={ref}
                     id={id}
                     className={classWrap}
-                    style={styleOverride}
+                    style={{...styleOverride, ...clipStyle}}
                     as={useLabel === true ? "label" : undefined}
                     targetX={target.x - bloomX}
                     targetY={target.y - bloomY}

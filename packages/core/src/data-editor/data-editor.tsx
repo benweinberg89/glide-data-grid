@@ -783,6 +783,8 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         forceEditMode: boolean;
         activation: CellActivatedEventArgs;
     }>();
+    const overlayRef = React.useRef(overlay);
+    overlayRef.current = overlay;
     const searchInputRef = React.useRef<HTMLInputElement | null>(null);
     const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
     const [mouseState, setMouseState] = React.useState<MouseState>();
@@ -1191,6 +1193,18 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
     const cellYOffset = visibleRegion.y;
 
     const gridRef = React.useRef<DataGridRef | null>(null);
+
+    // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
+    React.useLayoutEffect(() => {
+        const currentOverlay = overlayRef.current;
+        if (currentOverlay === undefined) return;
+        const newBounds = gridRef.current?.getBounds(currentOverlay.cell[0], currentOverlay.cell[1]);
+        if (newBounds === undefined) return;
+        const t = currentOverlay.target;
+        if (newBounds.x !== t.x || newBounds.y !== t.y || newBounds.width !== t.width || newBounds.height !== t.height) {
+            setOverlay(cv => (cv === undefined ? cv : { ...cv, target: newBounds }));
+        }
+    }, [visibleRegion]);
 
     const focus = React.useCallback((immediate?: boolean) => {
         if (immediate === true) {
@@ -3142,6 +3156,9 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         ]
     );
 
+    const onFinishEditingRef = React.useRef(onFinishEditing);
+    onFinishEditingRef.current = onFinishEditing;
+
     const overlayID = React.useMemo(() => {
         return `gdg-overlay-${idCounter++}`;
     }, []);
@@ -4331,6 +4348,8 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                             markdownDivCreateNode={markdownDivCreateNode}
                             isOutsideClick={isOutsideClick}
                             customEventTarget={experimental?.eventTarget}
+                            gridBounds={canvasRef.current?.getBoundingClientRect()}
+                            headerHeight={totalHeaderHeight}
                         />
                     </React.Suspense>
                 )}

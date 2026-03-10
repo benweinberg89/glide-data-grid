@@ -6,7 +6,7 @@ import { isEditableGridCell, isInnerOnlyCell, isObjectEditorCallbackResult, } fr
 import { DataGridOverlayEditorStyle } from "./data-grid-overlay-editor-style.js";
 import { useStayOnScreen } from "./use-stay-on-screen.js";
 const DataGridOverlayEditor = p => {
-    const { target, content, onFinishEditing: onFinishEditingIn, forceEditMode, initialValue, imageEditorOverride, markdownDivCreateNode, highlight, className, theme, id, cell, bloom, portalElementRef, validateCell, getCellRenderer, provideEditor, isOutsideClick, customEventTarget, activation, } = p;
+    const { target, content, onFinishEditing: onFinishEditingIn, forceEditMode, initialValue, imageEditorOverride, markdownDivCreateNode, highlight, className, theme, id, cell, bloom, portalElementRef, validateCell, getCellRenderer, provideEditor, isOutsideClick, customEventTarget, activation, gridBounds, headerHeight = 0, } = p;
     const [tempValue, setTempValueRaw] = React.useState(forceEditMode ? content : undefined);
     const lastValueRef = React.useRef(tempValue ?? content);
     lastValueRef.current = tempValue ?? content;
@@ -115,9 +115,27 @@ const DataGridOverlayEditor = p => {
     }
     const bloomX = bloom?.[0] ?? 1;
     const bloomY = bloom?.[1] ?? 1;
+    // Clip the overlay to the grid data area (below the header) so it doesn't spill outside during scroll
+    let clipStyle;
+    if (gridBounds !== undefined) {
+        const overlayX = target.x - bloomX;
+        const overlayY = target.y - bloomY;
+        // Top clip boundary is below the header
+        const dataTop = gridBounds.top + headerHeight;
+        const clipTop = Math.max(0, dataTop - overlayY);
+        const clipLeft = Math.max(0, gridBounds.left - overlayX);
+        // For right/bottom, use calc(100% - visible) since overlay size is dynamic
+        const visibleWidth = gridBounds.right - overlayX;
+        const visibleHeight = gridBounds.bottom - overlayY;
+        if (clipTop > 0 || clipLeft > 0 || visibleWidth < target.width + bloomX * 2 || visibleHeight < target.height + bloomY * 2) {
+            clipStyle = {
+                clipPath: `inset(${clipTop}px calc(100% - ${Math.max(0, visibleWidth)}px) calc(100% - ${Math.max(0, visibleHeight)}px) ${clipLeft}px)`,
+            };
+        }
+    }
     return createPortal(React.createElement(ThemeContext.Provider, { value: theme },
         React.createElement(ClickOutsideContainer, { style: makeCSSStyle(theme), className: className, onClickOutside: onClickOutside, isOutsideClick: isOutsideClick, customEventTarget: customEventTarget },
-            React.createElement(DataGridOverlayEditorStyle, { ref: ref, id: id, className: classWrap, style: styleOverride, as: useLabel === true ? "label" : undefined, targetX: target.x - bloomX, targetY: target.y - bloomY, targetWidth: target.width + bloomX * 2, targetHeight: target.height + bloomY * 2 },
+            React.createElement(DataGridOverlayEditorStyle, { ref: ref, id: id, className: classWrap, style: { ...styleOverride, ...clipStyle }, as: useLabel === true ? "label" : undefined, targetX: target.x - bloomX, targetY: target.y - bloomY, targetWidth: target.width + bloomX * 2, targetHeight: target.height + bloomY * 2 },
                 React.createElement("div", { className: "gdg-clip-region", onKeyDown: onKeyDown }, editor)))), portalElement);
 };
 export default DataGridOverlayEditor;

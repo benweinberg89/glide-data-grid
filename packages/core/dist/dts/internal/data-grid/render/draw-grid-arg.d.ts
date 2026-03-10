@@ -69,4 +69,3 @@ export interface DrawGridArg {
     readonly minimumCellWidth: number;
     readonly resizeIndicator: "full" | "header" | "none";
 }
-//# sourceMappingURL=draw-grid-arg.d.ts.map

@@ -26,6 +26,8 @@ interface DataGridOverlayEditorProps {
     readonly validateCell?: (cell: Item, newValue: EditableGridCell, prevValue: GridCell) => boolean | ValidatedGridCell;
     readonly isOutsideClick?: (e: MouseEvent | TouchEvent) => boolean;
     readonly customEventTarget?: HTMLElement | Window | Document;
+    readonly gridBounds?: DOMRect;
+    readonly headerHeight?: number;
 }
 declare const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>;
 export default DataGridOverlayEditor;
