@@ -211,7 +211,11 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
         );
     }
 
-    styleOverride = { ...styleOverride, ...stayOnScreenStyle };
+    // When scroll-anchoring is active, clip-path handles edge clipping,
+    // so skip the stay-on-screen translateX which fights with it.
+    if (gridBounds === undefined) {
+        styleOverride = { ...styleOverride, ...stayOnScreenStyle };
+    }
 
     // Consider imperatively creating and adding the element to the dom?
     const portalElement = portalElementRef?.current ?? document.getElementById("portal");
