@@ -1258,6 +1258,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                             width: Math.min(maxWidth, r.range.width),
                         },
                         style: r.style,
+                        label: r.label,
                     });
                 }
             }
