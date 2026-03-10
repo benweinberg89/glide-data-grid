@@ -305,8 +305,8 @@ export function drawGridLines(
         }
         ctx.clip("evenodd");
     }
-    const hColor = theme.horizontalBorderColor ?? theme.borderColor;
-    const vColor = theme.borderColor;
+    const hColor = blendCache(theme.horizontalBorderColor ?? theme.borderColor, theme.bgCell);
+    const vColor = blendCache(theme.borderColor, theme.bgCell);
 
     const { minX, maxX, minY, maxY } = getMinMaxXY(drawRegions, width, height);
 
@@ -356,12 +356,13 @@ export function drawGridLines(
             const ty = y + translateY;
             if (ty >= minY && ty <= maxY - 1) {
                 const rowTheme = getRowThemeOverride?.(row);
+                const rowHColor = rowTheme?.horizontalBorderColor ?? rowTheme?.borderColor;
                 toDraw.push({
                     x1: minX,
                     y1: ty,
                     x2: maxX,
                     y2: ty,
-                    color: rowTheme?.horizontalBorderColor ?? rowTheme?.borderColor ?? hColor,
+                    color: rowHColor !== undefined ? blendCache(rowHColor, theme.bgCell) : hColor,
                 });
             }
 
