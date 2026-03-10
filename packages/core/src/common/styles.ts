@@ -20,6 +20,7 @@ export function makeCSSStyle(theme: Theme): Record<string, string> {
         "--gdg-bg-group-header-hovered": theme.bgGroupHeaderHovered ?? theme.bgHeaderHovered,
         "--gdg-text-header-selected": theme.textHeaderSelected,
         "--gdg-bg-cell": theme.bgCell,
+        "--gdg-bg-cell-opaque": theme.bgCellEditor ?? theme.bgCell,
         "--gdg-bg-cell-medium": theme.bgCellMedium,
         "--gdg-bg-header": theme.bgHeader,
         "--gdg-bg-header-has-focus": theme.bgHeaderHasFocus,
@@ -93,6 +94,7 @@ export interface Theme {
     lineHeight: number;
     checkboxMaxSize: number;
 
+    bgCellEditor?: string;
     resizeIndicatorColor?: string;
     horizontalBorderColor?: string;
     headerBottomBorderColor?: string;

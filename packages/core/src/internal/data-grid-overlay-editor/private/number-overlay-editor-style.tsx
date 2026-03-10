@@ -10,6 +10,6 @@ export const NumberOverlayEditorStyle = styled.div`
         padding: 0;
         font-family: var(--gdg-font-family);
         color: var(--gdg-text-dark);
-        background-color: var(--gdg-bg-cell);
+        background-color: var(--gdg-bg-cell-opaque, var(--gdg-bg-cell));
     }
 `;

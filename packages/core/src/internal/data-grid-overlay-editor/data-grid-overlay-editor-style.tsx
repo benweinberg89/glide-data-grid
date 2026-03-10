@@ -39,7 +39,7 @@ export const DataGridOverlayEditorStyle = styled.div<Props>`
 
     &.gdg-style {
         border-radius: 2px;
-        background-color: var(--gdg-bg-cell);
+        background-color: var(--gdg-bg-cell-opaque, var(--gdg-bg-cell));
 
         box-shadow:
             0 0 0 1px var(--gdg-accent-color),

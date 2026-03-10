@@ -14,7 +14,7 @@ const DrilldownOverlayEditorStyle = styled.div`
         padding: 0 8px;
         height: 24px;
 
-        background-color: var(--gdg-bg-cell);
+        background-color: var(--gdg-bg-cell-opaque, var(--gdg-bg-cell));
         color: var(--gdg-text-dark);
         margin: 2px;
 

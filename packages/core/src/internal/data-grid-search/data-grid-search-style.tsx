@@ -5,7 +5,7 @@ export const SearchWrapper = styled.div`
     top: 4px;
     right: 20px;
 
-    background-color: var(--gdg-bg-cell);
+    background-color: var(--gdg-bg-cell-opaque, var(--gdg-bg-cell));
     color: var(--gdg-text-dark);
 
     padding: 8px;
@@ -40,7 +40,7 @@ export const SearchWrapper = styled.div`
     input {
         width: 220px;
         color: var(--gdg-text-dark);
-        background-color: var(--gdg-bg-cell);
+        background-color: var(--gdg-bg-cell-opaque, var(--gdg-bg-cell));
         border: none;
         border-width: 0;
         outline: none;
