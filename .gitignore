@@ -9,4 +9,3 @@ storybook-build/
 coverage/
 *.tsbuildinfo
 gen-docs/
-CLAUDE.md
