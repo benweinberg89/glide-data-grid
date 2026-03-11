@@ -51,6 +51,7 @@ interface DataGridOverlayEditorProps {
     readonly customEventTarget?: HTMLElement | Window | Document;
     readonly gridBounds?: DOMRect;
     readonly headerHeight?: number;
+    readonly frozenColumnRight?: number;
 }
 
 const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps> = p => {
@@ -77,6 +78,7 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
         activation,
         gridBounds,
         headerHeight = 0,
+        frozenColumnRight,
     } = p;
 
     const [tempValue, setTempValueRaw] = React.useState<GridCell | undefined>(forceEditMode ? content : undefined);
@@ -290,7 +292,8 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
     let clipStyle: React.CSSProperties | undefined;
     if (gridBounds !== undefined) {
         const dataTop = gridBounds.top + headerHeight + 1; // +1 for header bottom border pixel
-        const clipLeft = gridBounds.left - overlayX;
+        const effectiveLeft = frozenColumnRight ?? gridBounds.left;
+        const clipLeft = effectiveLeft - overlayX;
         const visibleWidth = gridBounds.right - overlayX;
 
         if (flipped) {

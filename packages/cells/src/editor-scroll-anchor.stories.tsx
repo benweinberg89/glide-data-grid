@@ -376,3 +376,111 @@ export const EditorScrollAnchorCustomCells = () => {
         />
     );
 };
+
+export const EditorScrollAnchorFrozenCells = () => {
+    const [data, setData] = React.useState(generateRows);
+
+    const getCellContent = React.useCallback(
+        (cell: Item): GridCell => {
+            const [col, row] = cell;
+            const r = data[row];
+            switch (col) {
+                case 0:
+                    return { kind: GridCellKind.Text, data: r.name, displayData: r.name, allowOverlay: true };
+                case 1:
+                    return { kind: GridCellKind.Text, data: r.company, displayData: r.company, allowOverlay: true };
+                case 2:
+                    return { kind: GridCellKind.Text, data: r.email, displayData: r.email, allowOverlay: true };
+                case 3: {
+                    const cell: DropdownCell = {
+                        kind: GridCellKind.Custom,
+                        data: { kind: "dropdown-cell", value: r.status, allowedValues: statuses },
+                        copyData: r.status,
+                        allowOverlay: true,
+                    };
+                    return cell;
+                }
+                case 4: {
+                    const cell: TagsCell = {
+                        kind: GridCellKind.Custom,
+                        data: { kind: "tags-cell", tags: r.tags, possibleTags },
+                        copyData: r.tags.join(", "),
+                        allowOverlay: true,
+                    };
+                    return cell;
+                }
+                case 5: {
+                    const cell: MultiSelectCell = {
+                        kind: GridCellKind.Custom,
+                        data: { kind: "multi-select-cell", values: r.skills, options: skillOptions, allowCreation: true },
+                        copyData: r.skills.join(", "),
+                        allowOverlay: true,
+                    };
+                    return cell;
+                }
+                case 6: {
+                    const cell: ArticleCell = {
+                        kind: GridCellKind.Custom,
+                        data: { kind: "article-cell", markdown: r.notes },
+                        copyData: r.notes,
+                        allowOverlay: true,
+                    };
+                    return cell;
+                }
+                case 7:
+                    return { kind: GridCellKind.Number, data: r.num, displayData: r.num.toString(), allowOverlay: true };
+                case 8:
+                    return { kind: GridCellKind.Uri, data: r.url, allowOverlay: true };
+                case 9:
+                    return { kind: GridCellKind.Number, data: r.score, displayData: r.score.toFixed(1), allowOverlay: true };
+                default:
+                    return { kind: GridCellKind.Text, data: "", displayData: "", allowOverlay: false };
+            }
+        },
+        [data]
+    );
+
+    const onCellEdited = React.useCallback((cell: Item, newValue: EditableGridCell) => {
+        const [col, row] = cell;
+        setData(prev => {
+            const next = [...prev];
+            const r = { ...next[row] };
+            switch (col) {
+                case 0: r.name = (newValue as { data: string }).data; break;
+                case 1: r.company = (newValue as { data: string }).data; break;
+                case 2: r.email = (newValue as { data: string }).data; break;
+                case 3:
+                    if (newValue.kind === GridCellKind.Custom) r.status = (newValue.data as DropdownCell["data"]).value;
+                    break;
+                case 4:
+                    if (newValue.kind === GridCellKind.Custom) r.tags = (newValue.data as TagsCell["data"]).tags.map(t => t.tag);
+                    break;
+                case 5:
+                    if (newValue.kind === GridCellKind.Custom) r.skills = (newValue.data as MultiSelectCell["data"]).values ?? [];
+                    break;
+                case 6:
+                    if (newValue.kind === GridCellKind.Custom) r.notes = (newValue.data as ArticleCell["data"]).markdown;
+                    break;
+                case 7: r.num = (newValue as { data: number | null }).data ?? 0; break;
+                case 8: r.url = (newValue as { data: string }).data; break;
+                case 9: r.score = (newValue as { data: number | null }).data ?? 0; break;
+            }
+            next[row] = r;
+            return next;
+        });
+    }, []);
+
+    return (
+        <DataEditor
+            {...defaultProps}
+            customRenderers={customRenderers}
+            getCellContent={getCellContent}
+            columns={columns}
+            rows={NUM_ROWS}
+            onCellEdited={onCellEdited}
+            freezeColumns={2}
+            freezeTrailingRows={2}
+            experimental={{ editorAnchorToCell: "close-on-scroll-out" }}
+        />
+    );
+};
