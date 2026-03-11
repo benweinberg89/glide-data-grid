@@ -2124,7 +2124,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                 location: args.location,
             };
 
-            if (args?.kind === "header") {
+            if (args?.kind === "header" && onColumnMoved !== undefined && !args.shiftKey) {
                 isActivelyDraggingHeader.current = true;
             }
 
@@ -2760,7 +2760,29 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                 const end = Math.max(mouseDownData.current.location[1], args.location[1]) + 1;
                 setSelectedRows(CompactSelection.fromSingleSelection([start, end]), undefined, false);
             }
-            // Only handle rect selection if not already processed by row selection:
+            // Column header drag-select: mirrors row drag-select but for columns.
+            // Active when dragging across headers with onColumnMoved unset (plain drag)
+            // or with Shift held (when onColumnMoved is set).
+            // Note: gridSelection.columns uses internal indices (including rowMarkerOffset),
+            // matching args.location[0], so no offset adjustment needed here.
+            else if (
+                args.buttons !== 0 &&
+                args.kind === "header" &&
+                mouseState !== undefined &&
+                columnSelect === "multi" &&
+                mouseDownData.current !== undefined &&
+                mouseDownData.current.location[1] === -1 &&
+                mouseState.previousSelection &&
+                !mouseState.previousSelection.columns.hasIndex(mouseDownData.current.location[0]) &&
+                gridSelection.columns.hasIndex(mouseDownData.current.location[0])
+            ) {
+                const mouseCol = mouseDownData.current.location[0];
+                const currentCol = args.location[0];
+                const start = Math.min(mouseCol, currentCol);
+                const end = Math.max(mouseCol, currentCol) + 1;
+                setSelectedColumns(CompactSelection.fromSingleSelection([start, end]), undefined, false);
+            }
+            // Only handle rect selection if not already processed by row/column selection:
             else if (
                 args.buttons !== 0 &&
                 mouseState !== undefined &&
@@ -2826,10 +2848,13 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
             mouseState,
             rowMarkerOffset,
             rowSelect,
+            columnSelect,
             gridSelection,
             rangeSelect,
             onItemHovered,
             setSelectedRows,
+            setSelectedColumns,
+            onColumnMoved,
             showTrailingBlankRow,
             rows,
             allowedFillDirections,

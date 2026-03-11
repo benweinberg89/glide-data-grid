@@ -165,7 +165,7 @@ const DataGridDnd: React.FunctionComponent<DataGridDndProps> = p => {
                         const scale = rect.width / canvas.offsetWidth;
                         const width = args.bounds.width / scale;
                         onColumnResizeStart?.(columns[col], width, col, width + (columns[col].growOffset ?? 0));
-                    } else if (args.kind === "header" && canDragCol) {
+                    } else if (args.kind === "header" && canDragCol && !args.shiftKey) {
                         setDragStartX(args.bounds.x);
                         setDragCol(col);
                     }
