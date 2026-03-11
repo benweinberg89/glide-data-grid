@@ -94,6 +94,14 @@ function drawMarkerRowCell(
         }
         ctx.globalAlpha = 1;
     }
+    // When the row is selected, fill the marker cell with solid accent color
+    // to match column header behavior (which uses accentColor bg when selected).
+    // Without this, the cell only gets accentLight (semi-transparent) from the
+    // rendering pipeline, making white textHeaderSelected text look washed out.
+    if (highlighted) {
+        ctx.fillStyle = theme.accentColor;
+        ctx.fillRect(x, y, width, height);
+    }
     if (markerKind === "number" || (markerKind === "both" && !checked)) {
         const text = formatLabel !== undefined ? formatLabel(index) : index.toString();
         const fontStyle = theme.markerFontFull;
