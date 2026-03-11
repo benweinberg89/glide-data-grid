@@ -696,6 +696,12 @@ export interface DataEditorProps extends Props, Pick<DataGridSearchProps, "image
     readonly drawFocusRing?: boolean | "no-editor";
 
     /**
+     * If set to false, the selection range outline (the rectangle drawn around
+     * multi-cell selections) will not be drawn. Default true.
+     */
+    readonly drawSelectionRing?: boolean;
+
+    /**
      * Allows overriding the default portal element.
      */
     readonly portalElementRef?: React.RefObject<HTMLElement>;
@@ -906,6 +912,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         resizeIndicator,
         scrollToActiveCell = true,
         drawFocusRing: drawFocusRingIn = true,
+        drawSelectionRing = true,
         portalElementRef,
     } = p;
 
@@ -1232,6 +1239,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
 
     // this will generally be undefined triggering the memo less often
     const highlightRange =
+        drawSelectionRing &&
         gridSelection.current !== undefined &&
         gridSelection.current.range.width * gridSelection.current.range.height > 1
             ? gridSelection.current.range
