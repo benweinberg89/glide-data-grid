@@ -103,6 +103,9 @@ export interface RowMarkerOptions {
     headerTheme?: Partial<Theme>;
     headerAlwaysVisible?: boolean;
     headerDisabled?: boolean;
+    /** Custom formatter for row marker labels. Receives the row index and returns display text.
+     *  Example: `(index) => String.fromCharCode(65 + index)` to show A, B, C... */
+    formatLabel?: (rowIndex: number) => string;
 }
 
 interface MouseState {
@@ -918,6 +921,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
     const headerRowMarkerAlwaysVisible = rowMarkersObj?.headerAlwaysVisible;
     const headerRowMarkerDisabled = rowSelect !== "multi" || rowMarkersObj?.headerDisabled === true;
     const rowMarkerCheckboxStyle = rowMarkersObj?.checkboxStyle ?? "square";
+    const rowMarkerFormatLabel = rowMarkersObj?.formatLabel;
 
     const minColumnWidth = Math.max(minColumnWidthIn, 20);
     const maxColumnWidth = Math.max(maxColumnWidthIn, minColumnWidth);
@@ -1326,6 +1330,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                     row: rowMarkerStartIndex + mappedRow,
                     drawHandle: onRowMoved !== undefined,
                     cursor: rowMarkers === "clickable-number" ? "pointer" : undefined,
+                    formatLabel: rowMarkerFormatLabel,
                 };
             } else if (isTrailing) {
                 //If the grid is empty, we will return text
@@ -1390,6 +1395,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
             gridSelection?.rows,
             rowMarkers,
             rowMarkerStartIndex,
+            rowMarkerFormatLabel,
             onRowMoved,
             rowMarkerOffset,
             trailingRowOptions?.hint,

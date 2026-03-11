@@ -4,14 +4,14 @@ import { drawCheckbox } from "../internal/data-grid/render/draw-checkbox.js";
 import type { BaseDrawArgs, InternalCellRenderer, PrepResult } from "./cell-types.js";
 
 export const markerCellRenderer: InternalCellRenderer<MarkerCell> = {
-    getAccessibilityString: c => c.row.toString(),
+    getAccessibilityString: c => c.formatLabel !== undefined ? c.formatLabel(c.row) : c.row.toString(),
     kind: InnerGridCellKind.Marker,
     needsHover: true,
     needsHoverPosition: false,
     drawPrep: prepMarkerRowCell,
     measure: () => 44,
     draw: a =>
-        drawMarkerRowCell(a, a.cell.row, a.cell.checked, a.cell.markerKind, a.cell.drawHandle, a.cell.checkboxStyle),
+        drawMarkerRowCell(a, a.cell.row, a.cell.checked, a.cell.markerKind, a.cell.drawHandle, a.cell.checkboxStyle, a.cell.formatLabel),
     onClick: e => {
         const { bounds, cell, posX: x, posY: y } = e;
         const { width, height } = bounds;
@@ -54,7 +54,8 @@ function drawMarkerRowCell(
     checked: boolean,
     markerKind: "checkbox" | "both" | "number" | "checkbox-visible",
     drawHandle: boolean,
-    style: "circle" | "square"
+    style: "circle" | "square",
+    formatLabel?: (rowIndex: number) => string
 ) {
     const { ctx, rect, hoverAmount, theme } = args;
     const { x, y, width, height } = rect;
@@ -93,7 +94,7 @@ function drawMarkerRowCell(
         ctx.globalAlpha = 1;
     }
     if (markerKind === "number" || (markerKind === "both" && !checked)) {
-        const text = index.toString();
+        const text = formatLabel !== undefined ? formatLabel(index) : index.toString();
         const fontStyle = theme.markerFontFull;
 
         const start = x + width / 2;
