@@ -124,7 +124,7 @@ export function drawHighlightRings(
                         ctx.rect(s.clip.x, s.clip.y, s.clip.width, s.clip.height);
                         ctx.clip();
                     }
-                    if (s.style === "dashed" && !dashed) {
+                    if ((s.style === "dashed" || s.style === "dashed-outline") && !dashed) {
                         ctx.setLineDash([5, 3]);
                         dashed = true;
                     } else if ((s.style === "solid" || s.style === "solid-outline") && dashed) {

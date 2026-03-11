@@ -56,7 +56,7 @@ export type GetRowThemeCallback = (row: number) => Partial<Theme> | undefined;
 export interface Highlight {
     readonly color: string;
     readonly range: Rectangle;
-    readonly style?: "dashed" | "solid" | "no-outline" | "solid-outline";
+    readonly style?: "dashed" | "solid" | "no-outline" | "solid-outline" | "dashed-outline";
     readonly label?: string;
 }
 
@@ -322,7 +322,7 @@ export function drawCells(
                             const region = highlightRegions[i];
                             const r = region.range;
                             if (
-                                region.style !== "solid-outline" &&
+                                region.style !== "solid-outline" && region.style !== "dashed-outline" &&
                                 r.x <= c.sourceIndex &&
                                 c.sourceIndex < r.x + r.width &&
                                 r.y <= row &&
