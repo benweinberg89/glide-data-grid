@@ -11,7 +11,7 @@ export const markerCellRenderer: InternalCellRenderer<MarkerCell> = {
     drawPrep: prepMarkerRowCell,
     measure: () => 44,
     draw: a =>
-        drawMarkerRowCell(a, a.cell.row, a.cell.checked, a.cell.markerKind, a.cell.drawHandle, a.cell.checkboxStyle, a.cell.formatLabel),
+        drawMarkerRowCell(a, a.cell.row, a.cell.checked, a.cell.markerKind, a.cell.drawHandle, a.cell.checkboxStyle, a.cell.formatLabel, a.highlighted),
     onClick: e => {
         const { bounds, cell, posX: x, posY: y } = e;
         const { width, height } = bounds;
@@ -55,7 +55,8 @@ function drawMarkerRowCell(
     markerKind: "checkbox" | "both" | "number" | "checkbox-visible",
     drawHandle: boolean,
     style: "circle" | "square",
-    formatLabel?: (rowIndex: number) => string
+    formatLabel?: (rowIndex: number) => string,
+    highlighted?: boolean
 ) {
     const { ctx, rect, hoverAmount, theme } = args;
     const { x, y, width, height } = rect;
@@ -101,7 +102,7 @@ function drawMarkerRowCell(
         if (markerKind === "both" && hoverAmount !== 0) {
             ctx.globalAlpha = 1 - hoverAmount;
         }
-        ctx.fillStyle = theme.textLight;
+        ctx.fillStyle = highlighted ? theme.textHeaderSelected : theme.textLight;
         ctx.font = fontStyle;
         ctx.fillText(text, start, y + height / 2 + getMiddleCenterBias(ctx, fontStyle));
         if (hoverAmount !== 0) {
