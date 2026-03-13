@@ -262,6 +262,13 @@ export interface DataGridProps {
                * If not provided, the grid will use the window as the event target.
                */
               readonly eventTarget?: HTMLElement | Window | Document;
+              /**
+               * Controls whether the editor overlay anchors to its cell during scroll.
+               * - undefined/false: editor stays at original position (default)
+               * - true: editor tracks cell, clips to grid data area
+               * - "close-on-scroll-out": tracks cell, closes editor when cell leaves view
+               */
+              readonly editorAnchorToCell?: boolean | "close-on-scroll-out";
           }
         | undefined;
 

@@ -792,6 +792,8 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         forceEditMode: boolean;
         activation: CellActivatedEventArgs;
     }>();
+    const overlayRef = React.useRef(overlay);
+    overlayRef.current = overlay;
     const searchInputRef = React.useRef<HTMLInputElement | null>(null);
     const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
     const [mouseState, setMouseState] = React.useState<MouseState>();
@@ -1202,6 +1204,54 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
     const cellYOffset = visibleRegion.y;
 
     const gridRef = React.useRef<DataGridRef | null>(null);
+
+    // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
+    const editorAnchorToCell = experimental?.editorAnchorToCell;
+    React.useLayoutEffect(() => {
+        if (!editorAnchorToCell) return;
+        const currentOverlay = overlayRef.current;
+        if (currentOverlay === undefined) return;
+        const newBounds = gridRef.current?.getBounds(currentOverlay.cell[0], currentOverlay.cell[1]);
+        if (newBounds === undefined) return;
+
+        // Close the editor if the cell has scrolled fully out of the grid data area.
+        // Frozen cells are always visible on their axis, so skip the relevant axis check.
+        if (editorAnchorToCell === "close-on-scroll-out") {
+            const gridRect = canvasRef.current?.getBoundingClientRect();
+            if (gridRect !== undefined) {
+                const [edCol, edRow] = currentOverlay.cell;
+                const isFrozenCol = edCol < freezeColumns + rowMarkerOffset;
+                const freezeTrailingRowsEffective = freezeTrailingRows + (lastRowSticky ? 1 : 0);
+                const isFrozenTrailingRow = edRow >= mangledRows - freezeTrailingRowsEffective;
+
+                const dataTop = gridRect.top + totalHeaderHeight + 1; // +1 for header bottom border pixel
+                const cellRight = newBounds.x + newBounds.width;
+                const cellBottom = newBounds.y + newBounds.height;
+                const outLeft = !isFrozenCol && cellRight <= gridRect.left;
+                const outRight = !isFrozenCol && newBounds.x >= gridRect.right;
+                const outTop = !isFrozenTrailingRow && cellBottom <= dataTop;
+                const outBottom = !isFrozenTrailingRow && newBounds.y >= gridRect.bottom;
+                if (outLeft || outRight || outTop || outBottom) {
+                    onFinishEditingRef.current(undefined, [0, 0]);
+                    return;
+                }
+            }
+        }
+
+        const t = currentOverlay.target;
+        if (newBounds.x !== t.x || newBounds.y !== t.y || newBounds.width !== t.width || newBounds.height !== t.height) {
+            setOverlay(cv => (cv === undefined ? cv : { ...cv, target: newBounds }));
+        }
+    }, [visibleRegion, editorAnchorToCell, totalHeaderHeight, columns]);
+
+    // Force re-render on window resize while editor is anchored, so gridBounds
+    // (from canvasRef.current?.getBoundingClientRect()) gets fresh values.
+    const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+    React.useEffect(() => {
+        if (!editorAnchorToCell || overlay === undefined) return;
+        window.addEventListener("resize", forceUpdate);
+        return () => window.removeEventListener("resize", forceUpdate);
+    }, [editorAnchorToCell, overlay === undefined]);
 
     const focus = React.useCallback((immediate?: boolean) => {
         if (immediate === true) {
@@ -3183,6 +3233,9 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         ]
     );
 
+    const onFinishEditingRef = React.useRef(onFinishEditing);
+    onFinishEditingRef.current = onFinishEditing;
+
     const overlayID = React.useMemo(() => {
         return `gdg-overlay-${idCounter++}`;
     }, []);
@@ -4372,6 +4425,15 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                             markdownDivCreateNode={markdownDivCreateNode}
                             isOutsideClick={isOutsideClick}
                             customEventTarget={experimental?.eventTarget}
+                            gridBounds={editorAnchorToCell ? canvasRef.current?.getBoundingClientRect() : undefined}
+                            headerHeight={editorAnchorToCell ? totalHeaderHeight : undefined}
+                            frozenColumnRight={(() => {
+                                if (!editorAnchorToCell || freezeColumns <= 0) return undefined;
+                                const lastFrozenCol = freezeColumns + rowMarkerOffset - 1;
+                                const frozenBounds = gridRef.current?.getBounds(lastFrozenCol, overlay.cell[1]);
+                                if (frozenBounds === undefined) return undefined;
+                                return frozenBounds.x + frozenBounds.width;
+                            })()}
                         />
                     </React.Suspense>
                 )}
