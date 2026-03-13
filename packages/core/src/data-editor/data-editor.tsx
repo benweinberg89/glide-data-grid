@@ -2239,6 +2239,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                         getCellRenderer
                     );
                     onColumnResize?.(inputCol, newCol.width, col, newCol.width);
+                    onColumnResizeEnd?.(inputCol, newCol.width, col, newCol.width);
                 }
             }
         },
@@ -2249,6 +2250,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
             mergedTheme,
             minColumnWidth,
             onColumnResize,
+            onColumnResizeEnd,
             rowMarkerOffset,
             rows,
             getCellRenderer,

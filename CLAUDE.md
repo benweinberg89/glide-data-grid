@@ -1,7 +1,7 @@
 # CLAUDE.md — Glide Data Grid Fork
 
 ## What This Is
-Fork of @glideapps/glide-data-grid v6.0.4-alpha25 with custom patches.
+Fork of @glideapps/glide-data-grid v6.0.4-alpha25 with custom changes.
 Upstream: https://github.com/glideapps/glide-data-grid
 Fork: https://github.com/benweinberg89/glide-data-grid
 
@@ -41,7 +41,9 @@ Consuming projects import from `dist/`, not `src/`.
 - Damage repaints: only dirty cells are re-rendered, then grid lines and highlight rings are redrawn on top
 - Theme flows through a `FullTheme` object and CSS custom properties (--gdg-*)
 
-## Custom Patches Applied (on top of v6.0.4-alpha25)
+## Custom Changes (on top of v6.0.4-alpha25)
+
+### On `main`
 1. Transparent/translucent grid backgrounds
 2. Opaque editor overlays (bgCellEditor CSS var)
 3. Header bottom border rendering
@@ -53,6 +55,17 @@ Consuming projects import from `dist/`, not `src/`.
 9. Drag-and-drop polish (suppress focus ring during column drag)
 10. Column label passthrough in DataEditor
 
+### On `feat/format-row-label` (branched from main)
+11. formatLabel option for RowMarkerOptions — custom row marker text
+12. drawSelectionRing prop — hide internal selection range outline
+13. Dashed-outline highlight region style
+14. Row marker selected styling — textHeaderSelected for text, solid accentColor fill
+15. Column header drag-select — mirrors row marker drag-select behavior
+16. Double-click column auto-size fix — DnD layer no longer fires resize-end when no drag occurred; normalSizeColumn now calls onColumnResizeEnd to persist the measured width (requires getCellsForSelection on the DataEditor)
+
+### On `feat/editor-scroll-anchor` (branched from main)
+17. Anchor editor overlay to cell on scroll (experimental.editorAnchorToCell prop)
+
 ## Developer Context
 - Python developer, not a software engineer — learning TypeScript and React with AI assistance
 - Comfortable reading code but not fluent in TS generics, advanced type patterns, or React internals
@@ -63,4 +76,4 @@ Consuming projects import from `dist/`, not `src/`.
 ## Rules
 - Edit TypeScript source in `src/`, never edit `dist/` directly
 - Rebuild dist/ locally after source changes (do not commit dist/)
-- Keep patches focused — one logical change per commit
+- Keep changes focused — one logical change per commit
