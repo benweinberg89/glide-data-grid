@@ -43,7 +43,6 @@ Consuming projects import from `dist/`, not `src/`.
 
 ## Custom Changes (on top of v6.0.4-alpha25)
 
-### On `main`
 1. Transparent/translucent grid backgrounds
 2. Opaque editor overlays (bgCellEditor CSS var)
 3. Header bottom border rendering
@@ -54,17 +53,12 @@ Consuming projects import from `dist/`, not `src/`.
 8. Highlight region labels (collab cursor name pills)
 9. Drag-and-drop polish (suppress focus ring during column drag)
 10. Column label passthrough in DataEditor
-
-### On `feat/format-row-label` (branched from main)
 11. formatLabel option for RowMarkerOptions — custom row marker text
 12. drawSelectionRing prop — hide internal selection range outline
 13. Dashed-outline highlight region style
 14. Row marker selected styling — textHeaderSelected for text, solid accentColor fill
 15. Column header drag-select — mirrors row marker drag-select behavior
 16. Double-click column auto-size fix — DnD layer no longer fires resize-end when no drag occurred; normalSizeColumn now calls onColumnResizeEnd to persist the measured width (requires getCellsForSelection on the DataEditor)
-
-### On `feat/editor-scroll-anchor` (branched from main)
-17. Anchor editor overlay to cell on scroll (experimental.editorAnchorToCell prop)
 
 ## Developer Context
 - Python developer, not a software engineer — learning TypeScript and React with AI assistance
