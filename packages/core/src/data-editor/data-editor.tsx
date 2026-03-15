@@ -1205,6 +1205,10 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
 
     const gridRef = React.useRef<DataGridRef | null>(null);
 
+    const overlayID = React.useMemo(() => {
+        return `gdg-overlay-${idCounter++}`;
+    }, []);
+
     // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
     const editorAnchorToCell = experimental?.editorAnchorToCell;
     React.useLayoutEffect(() => {
@@ -1244,14 +1248,40 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         }
     }, [visibleRegion, editorAnchorToCell, totalHeaderHeight, columns]);
 
-    // Force re-render on window resize while editor is anchored, so gridBounds
-    // (from canvasRef.current?.getBoundingClientRect()) gets fresh values.
-    const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+    // Track the cell position every frame while the editor is anchored, updating the overlay
+    // element's left/top directly on the DOM. This avoids lag from coalesced scroll events —
+    // rAF fires every frame, so the overlay tracks the cell at display refresh rate.
+    // The useLayoutEffect above handles grid-internal scroll via React state (which also
+    // updates clip-path, flip, and close-on-scroll-out). This rAF loop only patches left/top
+    // for external scroll (page, container) where clip-path doesn't change.
     React.useEffect(() => {
         if (!editorAnchorToCell || overlay === undefined) return;
-        window.addEventListener("resize", forceUpdate);
-        return () => window.removeEventListener("resize", forceUpdate);
-    }, [editorAnchorToCell, overlay === undefined]);
+        let rafId: number;
+        let active = true;
+
+        const tick = () => {
+            if (!active) return;
+            const currentOverlay = overlayRef.current;
+            if (currentOverlay !== undefined) {
+                const newBounds = gridRef.current?.getBounds(currentOverlay.cell[0], currentOverlay.cell[1]);
+                if (newBounds !== undefined) {
+                    const el = document.getElementById(overlayID);
+                    if (el !== null) {
+                        const bloomX = editorBloom?.[0] ?? 1;
+                        const bloomY = editorBloom?.[1] ?? 1;
+                        el.style.left = `${newBounds.x - bloomX}px`;
+                        el.style.top = `${newBounds.y - bloomY}px`;
+                    }
+                }
+            }
+            rafId = requestAnimationFrame(tick);
+        };
+        rafId = requestAnimationFrame(tick);
+        return () => {
+            active = false;
+            cancelAnimationFrame(rafId);
+        };
+    }, [editorAnchorToCell, overlay === undefined, overlayID, editorBloom]);
 
     const focus = React.useCallback((immediate?: boolean) => {
         if (immediate === true) {
@@ -3235,10 +3265,6 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
 
     const onFinishEditingRef = React.useRef(onFinishEditing);
     onFinishEditingRef.current = onFinishEditing;
-
-    const overlayID = React.useMemo(() => {
-        return `gdg-overlay-${idCounter++}`;
-    }, []);
 
     const deleteRange = React.useCallback(
         (r: Rectangle) => {

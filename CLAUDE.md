@@ -59,7 +59,7 @@ Consuming projects import from `dist/`, not `src/`.
 14. Row marker selected styling — textHeaderSelected for text, solid accentColor fill
 15. Column header drag-select — mirrors row marker drag-select behavior
 16. Double-click column auto-size fix — DnD layer no longer fires resize-end when no drag occurred; normalSizeColumn now calls onColumnResizeEnd to persist the measured width (requires getCellsForSelection on the DataEditor)
-17. Anchor editor overlay to cell on scroll (experimental.editorAnchorToCell prop)
+17. Anchor editor overlay to cell on scroll, including page/container scroll (experimental.editorAnchorToCell prop)
 
 ## Developer Context
 - Python developer, not a software engineer — learning TypeScript and React with AI assistance
