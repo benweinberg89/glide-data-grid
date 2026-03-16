@@ -2806,6 +2806,8 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
 
     const getSelectionRowLimits = React.useCallback(
         (selectedRow: number): readonly [number, number] | undefined => {
+            if (visibleRowBounds !== undefined) return visibleRowBounds;
+
             if (rowGroupingSelectionBehavior !== "block-spanning") return undefined;
 
             const { isGroupHeader, path, groupRows } = mapper(selectedRow);
@@ -2820,7 +2822,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
 
             return [lowerBounds, upperBounds];
         },
-        [mapper, rowGroupingSelectionBehavior]
+        [mapper, rowGroupingSelectionBehavior, visibleRowBounds]
     );
 
     const hoveredRef = React.useRef<GridMouseEventArgs>();
@@ -2829,14 +2831,6 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
             // make sure we still have a button down
             if (mouseEventArgsAreEqual(args, hoveredRef.current)) return;
             hoveredRef.current = args;
-            // When visibleRowBounds is set, clamp row to the specified range
-            // so the mouse cannot target rows outside the displayed area
-            if (visibleRowBounds !== undefined && args.location[1] >= 0) {
-                const clampedRow = clamp(args.location[1], visibleRowBounds[0], visibleRowBounds[1]);
-                if (clampedRow !== args.location[1]) {
-                    args = { ...args, location: [args.location[0], clampedRow] as any };
-                }
-            }
             if (mouseDownData?.current?.button !== undefined && mouseDownData.current.button >= 1) return;
             if (
                 args.buttons !== 0 &&
@@ -3159,6 +3153,9 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
             const rowMax = mangledRows - (fromEditingTrailingRow ? 0 : 1);
             col = clamp(col, rowMarkerOffset, columns.length - 1 + rowMarkerOffset);
             row = clamp(row, 0, rowMax);
+            if (visibleRowBounds !== undefined) {
+                row = clamp(row, visibleRowBounds[0], visibleRowBounds[1]);
+            }
 
             const curCol = currentCell?.[0];
             const curRow = currentCell?.[1];
@@ -3211,6 +3208,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
             scrollTo,
             setGridSelection,
             setCurrent,
+            visibleRowBounds,
         ]
     );
 
