@@ -25,6 +25,10 @@ interface Props {
     readonly kineticScrollPerfHack?: boolean;
     readonly scrollRef?: React.MutableRefObject<HTMLDivElement | null>;
     readonly update: (region: Rectangle & { paddingRight: number }) => void;
+    /** When true, vertical scrolling is disabled. The grid can still be scrolled
+     * programmatically via scrollTo. Useful for pagination where only one page
+     * of rows should be visible at a time. */
+    readonly lockVerticalScroll?: boolean;
 }
 
 const ScrollRegionStyle = styled.div<{ isSafari: boolean }>`
@@ -147,6 +151,7 @@ export const InfiniteScroller: React.FC<Props> = p => {
         kineticScrollPerfHack = false,
         scrollRef,
         initialSize,
+        lockVerticalScroll = false,
     } = p;
     const padders: React.ReactNode[] = [];
 
@@ -338,7 +343,10 @@ export const InfiniteScroller: React.FC<Props> = p => {
                 <div className="dvn-underlay">{children}</div>
                 <div
                     ref={setRefs}
-                    style={lastProps.current}
+                    style={{
+                        ...lastProps.current,
+                        ...(lockVerticalScroll ? { overflowY: "hidden" as const, overflowX: "auto" as const } : {}),
+                    }}
                     draggable={draggable}
                     onDragStart={e => {
                         if (!draggable) {

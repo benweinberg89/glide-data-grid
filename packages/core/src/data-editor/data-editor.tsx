@@ -899,6 +899,8 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         overscrollX: overscrollXIn,
         overscrollY: overscrollYIn,
         preventDiagonalScrolling,
+        lockVerticalScroll,
+        visibleRowBounds,
         rightElement,
         rightElementProps,
         trapFocus = false,
@@ -2827,6 +2829,14 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
             // make sure we still have a button down
             if (mouseEventArgsAreEqual(args, hoveredRef.current)) return;
             hoveredRef.current = args;
+            // When visibleRowBounds is set, clamp row to the specified range
+            // so the mouse cannot target rows outside the displayed area
+            if (visibleRowBounds !== undefined && args.location[1] >= 0) {
+                const clampedRow = clamp(args.location[1], visibleRowBounds[0], visibleRowBounds[1]);
+                if (clampedRow !== args.location[1]) {
+                    args = { ...args, location: [args.location[0], clampedRow] as any };
+                }
+            }
             if (mouseDownData?.current?.button !== undefined && mouseDownData.current.button >= 1) return;
             if (
                 args.buttons !== 0 &&
@@ -2942,6 +2952,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
             allowedFillDirections,
             getSelectionRowLimits,
             setCurrent,
+            visibleRowBounds,
         ]
     );
 
@@ -2969,7 +2980,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         });
     }, [mangledCols.length, onItemHoveredImpl, rows]);
 
-    useAutoscroll(scrollDir, scrollRef, adjustSelectionOnScroll);
+    useAutoscroll(scrollDir, scrollRef, adjustSelectionOnScroll, lockVerticalScroll);
 
     // 1 === move one
     // 2 === move to end
@@ -4359,6 +4370,8 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                     overscrollX={overscrollX}
                     overscrollY={overscrollY}
                     preventDiagonalScrolling={preventDiagonalScrolling}
+                    lockVerticalScroll={lockVerticalScroll}
+                    visibleRowBounds={visibleRowBounds}
                     rightElement={rightElement}
                     rightElementProps={rightElementProps}
                     smoothScrollX={smoothScrollX}

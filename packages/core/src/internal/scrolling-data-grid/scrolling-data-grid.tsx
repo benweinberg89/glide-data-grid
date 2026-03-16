@@ -67,6 +67,16 @@ export interface ScrollingDataGridProps extends Props {
     readonly rightElement: React.ReactNode | undefined;
     readonly clientSize: readonly [number, number, number]; // [width, height, rightElSize]
     readonly nonGrowWidth: number;
+    /** When true, vertical scrolling via mouse wheel / touch is disabled.
+     * The grid can still be scrolled programmatically via scrollTo.
+     * @group Advanced
+     */
+    readonly lockVerticalScroll: boolean | undefined;
+    /** When set, clamps mouse-resolved row indices to [min, max] during drag selection.
+     * Used with lockVerticalScroll to confine selection to a visible subset of rows.
+     * @group Advanced
+     */
+    readonly visibleRowBounds: readonly [number, number] | undefined;
 }
 
 const GridScroller: React.FunctionComponent<ScrollingDataGridProps> = p => {
@@ -266,7 +276,8 @@ const GridScroller: React.FunctionComponent<ScrollingDataGridProps> = p => {
             paddingRight={paddingRight}
             rightElementProps={rightElementProps}
             update={onScrollUpdate}
-            initialSize={initialSize}>
+            initialSize={initialSize}
+            lockVerticalScroll={p.lockVerticalScroll}>
             <DataGridDnd
                 eventTargetRef={scrollRef}
                 width={clientWidth}

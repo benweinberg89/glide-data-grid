@@ -7,10 +7,13 @@ const msToFullSpeed = 1300;
 export function useAutoscroll(
     scrollDirection: GridMouseCellEventArgs["scrollEdge"] | undefined,
     scrollRef: React.MutableRefObject<HTMLDivElement | null>,
-    onScroll?: () => void
+    onScroll?: () => void,
+    lockVerticalScroll?: boolean
 ) {
     const speedScalar = React.useRef(0);
-    const [xDir, yDir] = scrollDirection ?? [0, 0];
+    const [xDir, rawYDir] = scrollDirection ?? [0, 0];
+    // When vertical scroll is locked (e.g. pagination), suppress Y autoscroll
+    const yDir = lockVerticalScroll ? 0 : rawYDir;
     React.useEffect(() => {
         if (xDir === 0 && yDir === 0) {
             speedScalar.current = 0;
