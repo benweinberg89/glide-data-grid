@@ -888,6 +888,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         customRenderers: additionalRenderers,
         fillHandle,
         experimental,
+        experimental: { lockVerticalScroll, visibleRowBounds } = {},
         fixedShadowX,
         fixedShadowY,
         headerIcons,
@@ -899,8 +900,6 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         overscrollX: overscrollXIn,
         overscrollY: overscrollYIn,
         preventDiagonalScrolling,
-        lockVerticalScroll,
-        visibleRowBounds,
         rightElement,
         rightElementProps,
         trapFocus = false,
@@ -4368,8 +4367,6 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                     overscrollX={overscrollX}
                     overscrollY={overscrollY}
                     preventDiagonalScrolling={preventDiagonalScrolling}
-                    lockVerticalScroll={lockVerticalScroll}
-                    visibleRowBounds={visibleRowBounds}
                     rightElement={rightElement}
                     rightElementProps={rightElementProps}
                     smoothScrollX={smoothScrollX}

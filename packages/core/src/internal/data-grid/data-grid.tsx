@@ -269,6 +269,14 @@ export interface DataGridProps {
                * - "close-on-scroll-out": tracks cell, closes editor when cell leaves view
                */
               readonly editorAnchorToCell?: boolean | "close-on-scroll-out";
+              /** When true, vertical scrolling via mouse wheel / touch is disabled.
+               * The grid can still be scrolled programmatically via scrollTo.
+               * Useful for pagination where only one page of rows should be visible at a time. */
+              readonly lockVerticalScroll?: boolean;
+              /** When set, clamps mouse-resolved row indices to [min, max] during drag
+               * and keyboard selection. Used with lockVerticalScroll to confine selection
+               * to a visible subset of rows. */
+              readonly visibleRowBounds?: readonly [number, number];
           }
         | undefined;
 
