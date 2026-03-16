@@ -53,7 +53,6 @@ export interface DrawGridArg {
     readonly isFocused: boolean;
     readonly drawFocus: boolean;
     readonly selection: GridSelection;
-    readonly visibleRowBounds: readonly [number, number] | undefined;
     readonly fillHandle: FillHandle;
     readonly freezeTrailingRows: number;
     readonly hasAppendRow: boolean;

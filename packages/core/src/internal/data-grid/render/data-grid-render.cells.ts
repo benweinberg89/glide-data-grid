@@ -95,7 +95,6 @@ export function drawCells(
     drawRegions: readonly Rectangle[],
     damage: CellSet | undefined,
     selection: GridSelection,
-    visibleRowBounds: readonly [number, number] | undefined,
     prelightCells: CellList | undefined,
     highlightRegions: readonly Highlight[] | undefined,
     imageLoader: ImageWindowLoader,
@@ -293,7 +292,7 @@ export function drawCells(
                     }
                     if (!isSelected) {
                         if (rowSelected) accentCount++;
-                        if (colSelected && !isTrailingRow && (visibleRowBounds === undefined || (row >= visibleRowBounds[0] && row <= visibleRowBounds[1]))) accentCount++;
+                        if (colSelected && !isTrailingRow) accentCount++;
                     }
 
                     const bgCell = cell.kind === GridCellKind.Protected ? theme.bgCellMedium : theme.bgCell;
