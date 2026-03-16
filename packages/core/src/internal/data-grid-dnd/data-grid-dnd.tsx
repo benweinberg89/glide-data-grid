@@ -419,6 +419,7 @@ const DataGridDnd: React.FunctionComponent<DataGridDndProps> = p => {
             rowHeight={p.rowHeight}
             rows={p.rows}
             selection={p.selection}
+            visibleRowBounds={p.visibleRowBounds}
             smoothScrollX={p.smoothScrollX}
             smoothScrollY={p.smoothScrollY}
             theme={p.theme}

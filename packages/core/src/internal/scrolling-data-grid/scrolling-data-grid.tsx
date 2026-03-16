@@ -314,6 +314,7 @@ const GridScroller: React.FunctionComponent<ScrollingDataGridProps> = p => {
                 rowHeight={p.rowHeight}
                 rows={p.rows}
                 selection={p.selection}
+                visibleRowBounds={p.visibleRowBounds}
                 theme={p.theme}
                 freezeTrailingRows={p.freezeTrailingRows}
                 hasAppendRow={p.hasAppendRow}

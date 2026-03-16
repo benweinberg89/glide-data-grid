@@ -135,6 +135,7 @@ export interface DataGridProps {
     readonly onHeaderIndicatorClick: ((col: number, screenPosition: Rectangle) => void) | undefined;
 
     readonly selection: GridSelection;
+    readonly visibleRowBounds: readonly [number, number] | undefined;
     readonly prelightCells: readonly Item[] | undefined;
     /**
      * Highlight regions provide hints to users about relations between cells and selections.
@@ -363,6 +364,7 @@ const DataGrid: React.ForwardRefRenderFunction<DataGridRef, DataGridProps> = (p,
         onCanvasBlur,
         isFocused,
         selection,
+        visibleRowBounds,
         freezeColumns,
         onContextMenu,
         freezeTrailingRows,
@@ -825,6 +827,7 @@ const DataGrid: React.ForwardRefRenderFunction<DataGridRef, DataGridProps> = (p,
             resizeCol,
             isFocused,
             selection,
+            visibleRowBounds,
             fillHandle,
             drawCellCallback,
             hasAppendRow,
