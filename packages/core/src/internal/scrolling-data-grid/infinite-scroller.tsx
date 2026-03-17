@@ -29,6 +29,10 @@ interface Props {
      * programmatically via scrollTo. Useful for pagination where only one page
      * of rows should be visible at a time. */
     readonly lockVerticalScroll?: boolean;
+    /** When set, constrains the virtual Y scroll position to [minY, maxY].
+     * Allows scrolling within a row range while preventing cross-boundary scrolling.
+     * Computed from scrollRowBounds by ScrollingDataGrid. */
+    readonly scrollYClamp?: readonly [number, number];
 }
 
 const ScrollRegionStyle = styled.div<{ isSafari: boolean }>`
@@ -152,8 +156,10 @@ export const InfiniteScroller: React.FC<Props> = p => {
         scrollRef,
         initialSize,
         lockVerticalScroll = false,
+        scrollYClamp,
     } = p;
     const padders: React.ReactNode[] = [];
+    const isClampingScroll = React.useRef(false);
 
     const rightElementSticky = rightElementProps?.sticky ?? false;
     const rightElementFill = rightElementProps?.fill ?? false;
@@ -208,6 +214,12 @@ export const InfiniteScroller: React.FC<Props> = p => {
         (scrollLeft?: number, scrollTop?: number) => {
             const el = scroller.current;
             if (el === null) return;
+
+            // Guard against re-entrant scroll events from DOM scrollTop correction
+            if (isClampingScroll.current) {
+                isClampingScroll.current = false;
+                return;
+            }
 
             scrollTop = scrollTop ?? el.scrollTop;
             scrollLeft = scrollLeft ?? el.scrollLeft;
@@ -269,9 +281,23 @@ export const InfiniteScroller: React.FC<Props> = p => {
                 virtualScrollY.current = virtualY;
             }
 
-            // Ensure virtual Y is within valid bounds
-            virtualY = Math.max(0, Math.min(virtualY, scrollHeight - cHeight));
-            virtualScrollY.current = virtualY; // Keep tracked position in bounds too
+            // Ensure virtual Y is within valid bounds (apply scrollYClamp if set)
+            const minVY = scrollYClamp?.[0] ?? 0;
+            const maxVY = scrollYClamp?.[1] ?? (scrollHeight - cHeight);
+            const unclampedVY = virtualY;
+            virtualY = Math.max(minVY, Math.min(virtualY, maxVY));
+            virtualScrollY.current = virtualY;
+
+            // If clamped, correct DOM scrollTop to prevent desync and scrollbar drift
+            if (scrollYClamp !== undefined && virtualY !== unclampedVY) {
+                // Direct mapping case (content within browser limits)
+                if (scrollHeight <= el.scrollHeight + 5) {
+                    isClampingScroll.current = true;
+                    el.scrollTop = virtualY;
+                    lastScrollY.current = virtualY;
+                    lastScrollPosition.current.scrollTop = virtualY;
+                }
+            }
 
             if (lock !== undefined) {
                 window.clearTimeout(idleTimer.current);
@@ -287,7 +313,7 @@ export const InfiniteScroller: React.FC<Props> = p => {
                 paddingRight: rightWrapRef.current?.clientWidth ?? 0,
             });
         },
-        [paddingBottom, paddingRight, scrollHeight, update, preventDiagonalScrolling, hasTouches]
+        [paddingBottom, paddingRight, scrollHeight, update, preventDiagonalScrolling, hasTouches, scrollYClamp]
     );
 
     useKineticScroll(kineticScrollPerfHack && browserIsSafari.value, onScroll, scroller);

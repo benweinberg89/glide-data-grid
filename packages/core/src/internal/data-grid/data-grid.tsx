@@ -277,6 +277,12 @@ export interface DataGridProps {
                * and keyboard selection. Used with lockVerticalScroll to confine selection
                * to a visible subset of rows. */
               readonly visibleRowBounds?: readonly [number, number];
+              /** When set, constrains vertical scrolling to the given row range [minRow, maxRow].
+               * The user can scroll freely within this range but cannot scroll beyond it.
+               * Row markers and column headers remain sticky. The grid still renders all rows
+               * and scrollTo() can jump to any row (update bounds before calling scrollTo).
+               * Typically used with visibleRowBounds to also constrain selection. */
+              readonly scrollRowBounds?: readonly [number, number];
           }
         | undefined;
 

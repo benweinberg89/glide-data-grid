@@ -116,6 +116,29 @@ const GridScroller: React.FunctionComponent<ScrollingDataGridProps> = p => {
         height += overscrollY;
     }
 
+    // Convert scrollRowBounds (row indices) to pixel-space clamp range for InfiniteScroller
+    const scrollYClamp = React.useMemo(() => {
+        const bounds = experimental?.scrollRowBounds;
+        if (bounds === undefined) return undefined;
+        const [minRow, maxRow] = bounds;
+        const headerTotal = enableGroups ? headerHeight + groupHeaderHeight : headerHeight;
+
+        let minY: number;
+        let maxY: number;
+        if (typeof rowHeight === "number") {
+            minY = minRow * rowHeight;
+            maxY = headerTotal + (maxRow + 1) * rowHeight - clientHeight;
+        } else {
+            // Variable row heights: sum heights up to minRow, then through maxRow
+            minY = 0;
+            for (let r = 0; r < minRow; r++) minY += rowHeight(r);
+            let contentBottom = minY;
+            for (let r = minRow; r <= maxRow; r++) contentBottom += rowHeight(r);
+            maxY = headerTotal + contentBottom - clientHeight;
+        }
+        return [minY, Math.max(minY, maxY)] as const;
+    }, [experimental?.scrollRowBounds, rowHeight, clientHeight, enableGroups, headerHeight, groupHeaderHeight]);
+
     const lastArgs = React.useRef<Rectangle & { paddingRight: number }>();
 
     const processArgs = React.useCallback(() => {
@@ -267,7 +290,8 @@ const GridScroller: React.FunctionComponent<ScrollingDataGridProps> = p => {
             rightElementProps={rightElementProps}
             update={onScrollUpdate}
             initialSize={initialSize}
-            lockVerticalScroll={p.experimental?.lockVerticalScroll}>
+            lockVerticalScroll={p.experimental?.lockVerticalScroll}
+            scrollYClamp={scrollYClamp}>
             <DataGridDnd
                 eventTargetRef={scrollRef}
                 width={clientWidth}
