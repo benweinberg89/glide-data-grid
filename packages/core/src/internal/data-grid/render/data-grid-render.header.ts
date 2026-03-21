@@ -462,7 +462,7 @@ function drawHeaderInner(
     const fillStyle = selected ? theme.textHeaderSelected : theme.textHeader;
 
     const shouldDrawMenu =
-        c.hasMenu === true && (isHovered || (touchMode && selected)) && headerLayout.menuBounds !== undefined;
+        c.hasMenu === true && (c.menuIconAlwaysVisible === true || isHovered || (touchMode && selected)) && headerLayout.menuBounds !== undefined;
 
     if (c.icon !== undefined && headerLayout.iconBounds !== undefined) {
         let variant: SpriteVariant = selected ? "selected" : "normal";

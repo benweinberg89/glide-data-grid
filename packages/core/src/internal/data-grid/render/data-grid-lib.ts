@@ -30,6 +30,7 @@ export function useMappedColumns(
                     group: c.group,
                     grow: c.grow,
                     hasMenu: c.hasMenu,
+                    menuIconAlwaysVisible: c.menuIconAlwaysVisible,
                     icon: c.icon,
                     id: c.id,
                     menuIcon: c.menuIcon,
