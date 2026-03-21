@@ -1213,7 +1213,9 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
     // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
     const editorAnchorToCell = experimental?.editorAnchorToCell;
     const editorFlipHorizontal = experimental?.editorFlipHorizontal ?? false;
-    const closeEditorOnScroll = experimental?.closeEditorOnScroll ?? false;
+    const closeEditorOnScrollRaw = experimental?.closeEditorOnScroll;
+    const closeEditorOnScroll = closeEditorOnScrollRaw !== undefined && closeEditorOnScrollRaw !== false;
+    const closeEditorOnScrollIgnore = typeof closeEditorOnScrollRaw === "object" ? closeEditorOnScrollRaw.ignoreSelector : undefined;
     React.useLayoutEffect(() => {
         if (!editorAnchorToCell) return;
         const currentOverlay = overlayRef.current;
@@ -1321,12 +1323,15 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                 // (e.g. scrolling within a dropdown menu).
                 const overlayEl = document.getElementById(overlayID);
                 if (overlayEl !== null && overlayEl.contains(target)) return;
+                // Ignore scroll events from portaled elements matching the caller's selector
+                // (e.g. dropdown menus rendered outside the overlay DOM tree).
+                if (closeEditorOnScrollIgnore !== undefined && target.closest(closeEditorOnScrollIgnore) !== null) return;
             }
             onFinishEditingRef.current(undefined, [0, 0]);
         };
         window.addEventListener("scroll", handler, true);
         return () => window.removeEventListener("scroll", handler, true);
-    }, [closeEditorOnScroll, overlay === undefined, overlayID]);
+    }, [closeEditorOnScroll, closeEditorOnScrollIgnore, overlay === undefined, overlayID]);
 
     const focus = React.useCallback((immediate?: boolean) => {
         if (immediate === true) {
