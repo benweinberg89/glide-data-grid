@@ -1212,6 +1212,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
 
     // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
     const editorAnchorToCell = experimental?.editorAnchorToCell;
+    const editorFlipHorizontal = experimental?.editorFlipHorizontal ?? false;
     React.useLayoutEffect(() => {
         if (!editorAnchorToCell) return;
         const currentOverlay = overlayRef.current;
@@ -4459,6 +4460,8 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                             markdownDivCreateNode={markdownDivCreateNode}
                             isOutsideClick={isOutsideClick}
                             customEventTarget={experimental?.eventTarget}
+                            canvasLeft={editorFlipHorizontal ? canvasRef.current?.getBoundingClientRect().left ?? 0 : undefined}
+                            canvasRight={editorFlipHorizontal ? canvasRef.current?.getBoundingClientRect().right ?? 0 : undefined}
                             gridBounds={editorAnchorToCell ? canvasRef.current?.getBoundingClientRect() : undefined}
                             headerHeight={editorAnchorToCell ? totalHeaderHeight : undefined}
                             frozenColumnRight={(() => {

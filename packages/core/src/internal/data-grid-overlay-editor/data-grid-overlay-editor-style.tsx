@@ -20,7 +20,7 @@ export const DataGridOverlayEditorStyle = styled.div<Props>`
     top: ${p => p.targetY}px;
     min-width: ${p => p.targetWidth}px;
     min-height: ${p => p.targetHeight}px;
-    width: ${p => p.targetWidth}px;
+    width: max-content;
     max-width: 400px;
     max-height: calc(100vh - ${p => p.targetY + 10}px);
 

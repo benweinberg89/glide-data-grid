@@ -49,6 +49,8 @@ interface DataGridOverlayEditorProps {
     ) => boolean | ValidatedGridCell;
     readonly isOutsideClick?: (e: MouseEvent | TouchEvent) => boolean;
     readonly customEventTarget?: HTMLElement | Window | Document;
+    readonly canvasLeft?: number;
+    readonly canvasRight?: number;
     readonly gridBounds?: DOMRect;
     readonly headerHeight?: number;
     readonly frozenColumnRight?: number;
@@ -76,6 +78,8 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
         isOutsideClick,
         customEventTarget,
         activation,
+        canvasLeft,
+        canvasRight,
         gridBounds,
         headerHeight = 0,
         frozenColumnRight,
@@ -183,6 +187,7 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
     // Flip detection: measure the editor and flip it above the cell when it overflows the grid bottom.
     const editorElRef = React.useRef<HTMLElement | null>(null);
     const [flipped, setFlipped] = React.useState(false);
+    const [flippedX, setFlippedX] = React.useState(false);
 
     const combinedRef = React.useCallback(
         (el: HTMLElement | null) => {
@@ -193,19 +198,37 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
     );
 
     React.useLayoutEffect(() => {
-        if (gridBounds === undefined || editorElRef.current === null) {
+        if (editorElRef.current === null) {
             setFlipped(false);
+            setFlippedX(false);
             return;
         }
-        // Use offsetHeight (layout size, unaffected by transforms) so the decision
-        // is stable regardless of whether we're currently flipped or not.
+        // Use offsetHeight/offsetWidth (layout size, unaffected by transforms) so the
+        // decision is stable regardless of whether we're currently flipped or not.
         const editorHeight = editorElRef.current.offsetHeight;
+        const editorWidth = editorElRef.current.offsetWidth;
+        const bloomXVal = bloom?.[0] ?? 1;
         const bloomYVal = bloom?.[1] ?? 1;
-        const normalBottom = target.y - bloomYVal + editorHeight;
-        const spaceBelow = gridBounds.bottom - (target.y + target.height);
-        const spaceAbove = target.y - (gridBounds.top + headerHeight);
-        setFlipped(normalBottom > gridBounds.bottom + 1 && spaceAbove > spaceBelow);
-    }, [gridBounds, target, headerHeight, bloom]);
+
+        // Vertical flip (only when scroll-anchoring provides gridBounds)
+        if (gridBounds !== undefined) {
+            const normalBottom = target.y - bloomYVal + editorHeight;
+            const spaceBelow = gridBounds.bottom - (target.y + target.height);
+            const spaceAbove = target.y - (gridBounds.top + headerHeight);
+            setFlipped(normalBottom > gridBounds.bottom + 1 && spaceAbove > spaceBelow);
+        } else {
+            setFlipped(false);
+        }
+
+        // Horizontal flip: if the editor overflows the grid's right edge,
+        // anchor its right edge to the cell's right edge instead.
+        if (canvasRight !== undefined) {
+            const overlayLeft = target.x - bloomXVal;
+            setFlippedX(overlayLeft + editorWidth > canvasRight);
+        } else {
+            setFlippedX(false);
+        }
+    }, [gridBounds, target, headerHeight, bloom, canvasRight]);
 
     let pad = true;
     let editor: React.ReactNode;
@@ -240,9 +263,9 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
         );
     }
 
-    // When scroll-anchoring is active, clip-path handles edge clipping,
-    // so skip the stay-on-screen translateX which fights with it.
-    if (gridBounds === undefined) {
+    // When scroll-anchoring is active or the editor is horizontally flipped,
+    // skip the stay-on-screen translateX which would fight with the positioning.
+    if (gridBounds === undefined && !flippedX) {
         styleOverride = { ...styleOverride, ...stayOnScreenStyle };
     }
 
@@ -268,20 +291,38 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
     const bloomX = bloom?.[0] ?? 1;
     const bloomY = bloom?.[1] ?? 1;
 
-    const overlayX = target.x - bloomX;
+    // Clamp overlay position to the visible grid area so partially-offscreen
+    // columns don't push the editor outside the grid boundaries.
+    const normalOverlayX = Math.max(target.x - bloomX, canvasLeft ?? -Infinity);
+    const overlayX = flippedX
+        ? Math.min(target.x + target.width + bloomX, canvasRight ?? Infinity)
+        : normalOverlayX;
     const normalOverlayY = target.y - bloomY;
     const flippedOverlayY = target.y + target.height + bloomY;
     const overlayY = flipped ? flippedOverlayY : normalOverlayY;
 
-    // When flipped, position the CSS box at the cell bottom and shift it up by its own height
-    // via translateY(-100%). Constrain max-height to the space above (down to the data area top).
+    // When flipped vertically/horizontally, use translateX/Y(-100%) to anchor the
+    // overlay to the opposite edge. Constrain max dimensions to stay within the grid.
     let flipStyle: React.CSSProperties | undefined;
-    if (flipped && gridBounds !== undefined) {
-        const dataTop = gridBounds.top + headerHeight + 1;
-        flipStyle = {
-            transform: "translateY(-100%)",
-            maxHeight: flippedOverlayY - dataTop,
-        };
+    if (flipped || flippedX) {
+        const transforms: string[] = [];
+        const style: React.CSSProperties = {};
+        if (flippedX) {
+            transforms.push("translateX(-100%)");
+            // Cap width so the editor doesn't extend past the grid's left or right edge.
+            // overlayX is the right anchor point, so max-width = overlayX keeps it in bounds.
+            style.maxWidth = overlayX;
+            // Override min-width when the cell is partially offscreen, so it doesn't
+            // force the editor wider than the visible area.
+            style.minWidth = 0;
+        }
+        if (flipped && gridBounds !== undefined) {
+            transforms.push("translateY(-100%)");
+            const dataTop = gridBounds.top + headerHeight + 1;
+            style.maxHeight = flippedOverlayY - dataTop;
+        }
+        style.transform = transforms.join(" ");
+        flipStyle = style;
     }
 
     // Clip the overlay to the grid data area (below the header) so it doesn't spill outside during scroll.
@@ -289,28 +330,33 @@ const DataGridOverlayEditor: React.FunctionComponent<DataGridOverlayEditorProps>
     // (e.g. dropdowns, multi-select), so we can't check against target dimensions alone.
     // Raw values can be negative when the overlay is fully inside the grid — negative inset expands
     // the clip region beyond the element, allowing box-shadow/borders to render normally.
+    //
+    // When flipped (translateX/Y(-100%)), clip-path operates on the untransformed box,
+    // so we compute insets that produce correct visual clipping after the transform.
     let clipStyle: React.CSSProperties | undefined;
     if (gridBounds !== undefined) {
         const dataTop = gridBounds.top + headerHeight + 1; // +1 for header bottom border pixel
         const effectiveLeft = frozenColumnRight ?? gridBounds.left;
-        const clipLeft = effectiveLeft - overlayX;
-        const visibleWidth = gridBounds.right - overlayX;
 
-        if (flipped) {
-            // With translateY(-100%), clip-path operates on the untransformed box.
-            // We compute insets that produce correct visual clipping after the transform.
-            const clipTop = `calc(100% - ${flippedOverlayY - dataTop}px)`;
-            const clipBottom = flippedOverlayY - gridBounds.bottom;
-            clipStyle = {
-                clipPath: `inset(${clipTop} calc(100% - ${visibleWidth}px) ${clipBottom}px ${clipLeft}px)`,
-            };
-        } else {
-            const clipTop = dataTop - overlayY;
-            const visibleHeight = gridBounds.bottom - overlayY;
-            clipStyle = {
-                clipPath: `inset(${clipTop}px calc(100% - ${visibleWidth}px) calc(100% - ${visibleHeight}px) ${clipLeft}px)`,
-            };
-        }
+        // Vertical clip components
+        const clipTop = flipped
+            ? `calc(100% - ${flippedOverlayY - dataTop}px)`
+            : `${dataTop - overlayY}px`;
+        const clipBottom = flipped
+            ? `${flippedOverlayY - gridBounds.bottom}px`
+            : `calc(100% - ${gridBounds.bottom - overlayY}px)`;
+
+        // Horizontal clip components
+        const clipLeft = flippedX
+            ? `calc(${effectiveLeft - overlayX}px + 100%)`
+            : `${effectiveLeft - overlayX}px`;
+        const clipRight = flippedX
+            ? `${overlayX - gridBounds.right}px`
+            : `calc(100% - ${gridBounds.right - overlayX}px)`;
+
+        clipStyle = {
+            clipPath: `inset(${clipTop} ${clipRight} ${clipBottom} ${clipLeft})`,
+        };
     }
 
     return createPortal(

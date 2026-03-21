@@ -269,6 +269,10 @@ export interface DataGridProps {
                * - "close-on-scroll-out": tracks cell, closes editor when cell leaves view
                */
               readonly editorAnchorToCell?: boolean | "close-on-scroll-out";
+              /** When true, the editor overlay flips to expand leftward when it would
+               * overflow the grid's right edge. Prevents whitespace/scrollbar creation
+               * from wide editors on rightmost columns. */
+              readonly editorFlipHorizontal?: boolean;
               /** When true, vertical scrolling via mouse wheel / touch is disabled.
                * The grid can still be scrolled programmatically via scrollTo.
                * Useful for pagination where only one page of rows should be visible at a time. */
