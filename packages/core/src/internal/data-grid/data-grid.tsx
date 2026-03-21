@@ -287,6 +287,8 @@ export interface DataGridProps {
                * and scrollTo() can jump to any row (update bounds before calling scrollTo).
                * Typically used with visibleRowBounds to also constrain selection. */
               readonly scrollRowBounds?: readonly [number, number];
+              /** When true, closes the cell editor overlay as soon as the grid scrolls. */
+              readonly closeEditorOnScroll?: boolean;
           }
         | undefined;
 

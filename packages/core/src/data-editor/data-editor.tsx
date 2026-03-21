@@ -1213,6 +1213,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
     // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
     const editorAnchorToCell = experimental?.editorAnchorToCell;
     const editorFlipHorizontal = experimental?.editorFlipHorizontal ?? false;
+    const closeEditorOnScroll = experimental?.closeEditorOnScroll ?? false;
     React.useLayoutEffect(() => {
         if (!editorAnchorToCell) return;
         const currentOverlay = overlayRef.current;
@@ -1250,6 +1251,25 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         }
     }, [visibleRegion, editorAnchorToCell, totalHeaderHeight, columns]);
 
+    // Close the editor overlay when the grid scrolls, if closeEditorOnScroll is enabled.
+    // Uses a ref to skip the initial fire (when the overlay first opens).
+    const closeOnScrollInitial = React.useRef(true);
+    React.useLayoutEffect(() => {
+        if (!closeEditorOnScroll) {
+            closeOnScrollInitial.current = true;
+            return;
+        }
+        if (overlayRef.current === undefined) {
+            closeOnScrollInitial.current = true;
+            return;
+        }
+        if (closeOnScrollInitial.current) {
+            closeOnScrollInitial.current = false;
+            return;
+        }
+        onFinishEditingRef.current(undefined, [0, 0]);
+    }, [visibleRegion, closeEditorOnScroll]);
+
     // Track the cell position every frame while the editor is anchored, updating the overlay
     // element's left/top directly on the DOM. This avoids lag from coalesced scroll events —
     // rAF fires every frame, so the overlay tracks the cell at display refresh rate.
@@ -1284,6 +1304,29 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
             cancelAnimationFrame(rafId);
         };
     }, [editorAnchorToCell, overlay === undefined, overlayID, editorBloom]);
+
+    // Close the editor on page/container scroll (external to the grid).
+    // Uses capture phase to detect scroll on any ancestor element.
+    // Grid-internal scroll is handled by the visibleRegion useLayoutEffect above;
+    // this effect covers page scroll, scrollable parent containers, etc.
+    React.useEffect(() => {
+        if (!closeEditorOnScroll || overlay === undefined) return;
+        const handler = (e: Event) => {
+            const target = e.target;
+            if (target instanceof HTMLElement) {
+                // Ignore scroll events originating from the grid's own scroll container —
+                // those are handled by the visibleRegion-based effect above.
+                if (target.closest(".dvn-scroller") !== null) return;
+                // Ignore scroll events from inside the editor overlay itself
+                // (e.g. scrolling within a dropdown menu).
+                const overlayEl = document.getElementById(overlayID);
+                if (overlayEl !== null && overlayEl.contains(target)) return;
+            }
+            onFinishEditingRef.current(undefined, [0, 0]);
+        };
+        window.addEventListener("scroll", handler, true);
+        return () => window.removeEventListener("scroll", handler, true);
+    }, [closeEditorOnScroll, overlay === undefined, overlayID]);
 
     const focus = React.useCallback((immediate?: boolean) => {
         if (immediate === true) {
