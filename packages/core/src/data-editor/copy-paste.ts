@@ -17,13 +17,18 @@ type StringArrayCellBuffer = {
 type BasicCellBuffer = {
     formatted: string;
     rawValue: string | number | boolean | BooleanEmpty | BooleanIndeterminate | undefined;
-    format: "string" | "number" | "boolean" | "url";
+    format: "string" | "number" | "boolean" | "url" | "skip";
     doNotEscape?: boolean;
 };
 export type CellBuffer = StringArrayCellBuffer | BasicCellBuffer;
 export type CopyBuffer = CellBuffer[][];
 
+export const COPY_SKIP_MARKER = "\x00gdg-skip";
+
 function convertCellToBuffer(cell: GridCell): CellBuffer {
+    if (cell.copyData === COPY_SKIP_MARKER) {
+        return { formatted: "", rawValue: "", format: "skip" };
+    }
     if (cell.copyData !== undefined) {
         return {
             formatted: cell.copyData,
@@ -183,6 +188,10 @@ function createHtmlBuffer(copyBuffer: CopyBuffer): string {
     for (const row of copyBuffer) {
         lines.push("<tr>");
         for (const cell of row) {
+            if (cell.format === "skip") {
+                lines.push(`<td gdg-skip="true"></td>`);
+                continue;
+            }
             const formatStr = `gdg-format="${cell.format}"`;
             if (cell.format === "url") {
                 lines.push(
@@ -260,6 +269,11 @@ export function decodeHTML(html: string): CopyBuffer | undefined {
             current = [];
             walkEl.push(...[...el.children].reverse());
         } else if (el instanceof HTMLTableCellElement) {
+            // Skip cells marked as holes from merged selection copy
+            if (el.getAttribute("gdg-skip") === "true") {
+                current?.push({ rawValue: "", formatted: "", format: "skip" });
+                continue;
+            }
             // be careful not to use innerText here as its behavior is not well defined for non DOM attached nodes
             const clone: HTMLTableCellElement = el.cloneNode(true) as HTMLTableCellElement;
 

@@ -61,7 +61,7 @@ import { unquote, expandSelection, copyToClipboard, toggleBoolean } from "./data
 import { DataEditorContainer } from "../internal/data-editor-container/data-grid-container.js";
 import { useAutoscroll } from "./use-autoscroll.js";
 import type { CustomRenderer, CellRenderer, InternalCellRenderer } from "../cells/cell-types.js";
-import { decodeHTML, type CopyBuffer } from "./copy-paste.js";
+import { decodeHTML, COPY_SKIP_MARKER, type CopyBuffer } from "./copy-paste.js";
 import { useRemAdjuster } from "./use-rem-adjuster.js";
 import { withAlpha } from "../internal/data-grid/color-parser.js";
 import { combineRects, getClosestRect, pointInRect } from "../common/math.js";
@@ -1214,6 +1214,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
     const editorAnchorToCell = experimental?.editorAnchorToCell;
     const editorFlipHorizontal = experimental?.editorFlipHorizontal ?? false;
     const mergedSelectionRing = experimental?.mergedSelectionRing ?? false;
+    const mergedSelectionCopyMode = experimental?.mergedSelectionCopyMode ?? "enclosing-rect";
     const closeEditorOnScrollRaw = experimental?.closeEditorOnScroll;
     const closeEditorOnScroll = closeEditorOnScrollRaw !== undefined && closeEditorOnScrollRaw !== false;
     const closeEditorOnScrollIgnore = typeof closeEditorOnScrollRaw === "object" ? closeEditorOnScrollRaw.ignoreSelector : undefined;
@@ -3908,6 +3909,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                     for (const [row, dataRow] of data.entries()) {
                         if (row + targetRow >= rows) break;
                         for (const [col, dataItem] of dataRow.entries()) {
+                            if (dataItem.format === "skip") continue;
                             const index = [col + targetCol, row + targetRow] as const;
                             const [writeCol, writeRow] = index;
                             if (writeCol >= mangledCols.length) continue;
@@ -3982,17 +3984,126 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
 
             if (focused && getCellsForSelection !== undefined) {
                 if (gridSelection.current !== undefined) {
-                    let thunk = getCellsForSelection(gridSelection.current.range, abortControllerRef.current.signal);
-                    if (typeof thunk !== "object") {
-                        thunk = await thunk();
+                    const { range: primaryRange, rangeStack } = gridSelection.current;
+
+                    // Multi-range copy when mergedSelectionRing is enabled and rangeStack has entries.
+                    if (mergedSelectionRing && rangeStack.length > 0) {
+                        const allRanges = [...rangeStack, primaryRange];
+
+                        // Compute bounding rect of all ranges
+                        let minCol = primaryRange.x;
+                        let minRow = primaryRange.y;
+                        let maxCol = primaryRange.x + primaryRange.width;
+                        let maxRow = primaryRange.y + primaryRange.height;
+                        for (const r of rangeStack) {
+                            minCol = Math.min(minCol, r.x);
+                            minRow = Math.min(minRow, r.y);
+                            maxCol = Math.max(maxCol, r.x + r.width);
+                            maxRow = Math.max(maxRow, r.y + r.height);
+                        }
+                        const boundWidth = maxCol - minCol;
+
+                        // Build set of selected cells for membership checks
+                        const selectedCells = new Set<string>();
+                        for (const r of allRanges) {
+                            for (let col = r.x; col < r.x + r.width; col++) {
+                                for (let row = r.y; row < r.y + r.height; row++) {
+                                    selectedCells.add(`${col},${row}`);
+                                }
+                            }
+                        }
+
+                        const skipCell: GridCell = {
+                            kind: GridCellKind.Text,
+                            data: "",
+                            displayData: "",
+                            allowOverlay: false,
+                            copyData: COPY_SKIP_MARKER,
+                        };
+
+                        if (mergedSelectionCopyMode === "enclosing-rect") {
+                            // Enclosing rect: copy bounding rectangle, unselected cells = empty
+                            const allCells: (readonly GridCell[])[] = [];
+                            for (let row = minRow; row < maxRow; row++) {
+                                const rowCells: GridCell[] = [];
+                                for (let col = minCol; col < maxCol; col++) {
+                                    if (selectedCells.has(`${col},${row}`)) {
+                                        rowCells.push(getMangledCellContent([col, row]) as GridCell);
+                                    } else {
+                                        rowCells.push(skipCell);
+                                    }
+                                }
+                                allCells.push(rowCells);
+                            }
+                            copyToClipboardWithHeaders(
+                                allCells,
+                                range(minCol - rowMarkerOffset, maxCol - rowMarkerOffset)
+                            );
+                        } else {
+                            // Compact: only selected rows, concatenated without gaps.
+                            // Requires matching column spans; falls through to single-range if not.
+                            const sameColumns = allRanges.every(
+                                r => r.x === minCol && r.x + r.width === maxCol
+                            );
+                            if (sameColumns) {
+                                const rowSet = new Set<number>();
+                                for (const r of allRanges) {
+                                    for (let row = r.y; row < r.y + r.height; row++) {
+                                        rowSet.add(row);
+                                    }
+                                }
+                                const sortedRows = [...rowSet].sort((a, b) => a - b);
+
+                                const allCells: (readonly GridCell[])[] = [];
+                                for (const row of sortedRows) {
+                                    let thunk = getCellsForSelection(
+                                        { x: minCol, y: row, width: boundWidth, height: 1 },
+                                        abortControllerRef.current.signal
+                                    );
+                                    if (typeof thunk !== "object") {
+                                        thunk = await thunk();
+                                    }
+                                    allCells.push(thunk[0]);
+                                }
+                                copyToClipboardWithHeaders(
+                                    allCells,
+                                    range(minCol - rowMarkerOffset, maxCol - rowMarkerOffset)
+                                );
+                            } else {
+                                // Column spans don't match in compact mode — fall through to
+                                // enclosing rect as fallback
+                                const allCells: (readonly GridCell[])[] = [];
+                                for (let row = minRow; row < maxRow; row++) {
+                                    const rowCells: GridCell[] = [];
+                                    for (let col = minCol; col < maxCol; col++) {
+                                        if (selectedCells.has(`${col},${row}`)) {
+                                            rowCells.push(getMangledCellContent([col, row]) as GridCell);
+                                        } else {
+                                            rowCells.push(skipCell);
+                                        }
+                                    }
+                                    allCells.push(rowCells);
+                                }
+                                copyToClipboardWithHeaders(
+                                    allCells,
+                                    range(minCol - rowMarkerOffset, maxCol - rowMarkerOffset)
+                                );
+                            }
+                        }
+                    } else {
+                        // Single range copy (default / no rangeStack)
+                        let thunk = getCellsForSelection(primaryRange, abortControllerRef.current.signal);
+                        if (typeof thunk !== "object") {
+                            thunk = await thunk();
+                        }
+                        copyToClipboardWithHeaders(
+                            thunk,
+                            range(
+                                primaryRange.x - rowMarkerOffset,
+                                primaryRange.x + primaryRange.width - rowMarkerOffset
+                            )
+                        );
                     }
-                    copyToClipboardWithHeaders(
-                        thunk,
-                        range(
-                            gridSelection.current.range.x - rowMarkerOffset,
-                            gridSelection.current.range.x + gridSelection.current.range.width - rowMarkerOffset
-                        )
-                    );
                 } else if (selectedRows !== undefined && selectedRows.length > 0) {
                     const toCopy = [...selectedRows];
                     const cells = toCopy.map(rowIndex => {
@@ -4048,8 +4159,11 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         [
             columnsIn,
             getCellsForSelection,
+            getMangledCellContent,
             gridSelection,
             keybindings.copy,
+            mergedSelectionCopyMode,
+            mergedSelectionRing,
             rowMarkerOffset,
             scrollRef,
             rows,

@@ -297,6 +297,12 @@ export interface DataGridProps {
                * instead of per-rect rings. Prevents alpha stacking on overlapping ranges and
                * strokes only the outer boundary of the union. */
               readonly mergedSelectionRing?: boolean;
+              /** Controls how multi-range selections are copied to clipboard when
+               * mergedSelectionRing is enabled.
+               * - "enclosing-rect": copies the bounding rectangle of all selections,
+               *   filling unselected cells with empty strings (default)
+               * - "compact": concatenates only selected rows, no gaps */
+              readonly mergedSelectionCopyMode?: "enclosing-rect" | "compact";
           }
         | undefined;
 
