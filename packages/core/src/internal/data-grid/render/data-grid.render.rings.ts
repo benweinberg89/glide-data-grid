@@ -210,6 +210,155 @@ export function drawHighlightRings(
     return drawCb;
 }
 
+export function drawMergedSelectionRing(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    cellXOffset: number,
+    cellYOffset: number,
+    translateX: number,
+    translateY: number,
+    mappedColumns: readonly MappedGridColumn[],
+    freezeColumns: number,
+    headerHeight: number,
+    groupHeaderHeight: number,
+    rowHeight: number | ((index: number) => number),
+    freezeTrailingRows: number,
+    rows: number,
+    selection: GridSelection,
+    theme: FullTheme
+): (() => void) | undefined {
+    if (selection.current === undefined) return undefined;
+
+    const { range, rangeStack } = selection.current;
+    // Only draw contour when there's a multi-cell selection
+    if (range.width * range.height <= 1 && rangeStack.length === 0) return undefined;
+
+    const allRanges = rangeStack.length > 0 ? [range, ...rangeStack] : [range];
+
+    // Build set of all selected cells
+    const selectedCells = new Set<string>();
+    for (const r of allRanges) {
+        for (let col = r.x; col < r.x + r.width; col++) {
+            for (let row = r.y; row < r.y + r.height; row++) {
+                selectedCells.add(`${col},${row}`);
+            }
+        }
+    }
+
+    if (selectedCells.size === 0) return undefined;
+
+    const totalHeaderHeight = headerHeight + groupHeaderHeight;
+    const freezeLeft = getStickyWidth(mappedColumns);
+    const freezeBottom = getFreezeTrailingHeight(rows, freezeTrailingRows, rowHeight);
+
+    // Define clip regions for freeze-aware drawing
+    const clipRegions: { x: number; y: number; w: number; h: number }[] = [
+        // Scrollable data area
+        {
+            x: freezeLeft,
+            y: totalHeaderHeight,
+            w: width - freezeLeft,
+            h: height - totalHeaderHeight - freezeBottom,
+        },
+    ];
+    if (freezeColumns > 0) {
+        // Frozen left columns
+        clipRegions.push({
+            x: 0,
+            y: totalHeaderHeight,
+            w: freezeLeft,
+            h: height - totalHeaderHeight - freezeBottom,
+        });
+    }
+    if (freezeTrailingRows > 0) {
+        // Frozen bottom rows (full width)
+        clipRegions.push({ x: 0, y: height - freezeBottom, w: width, h: freezeBottom });
+    }
+
+    const drawContourEdges = () => {
+        for (const clip of clipRegions) {
+            if (clip.w <= 0 || clip.h <= 0) continue;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(clip.x, clip.y, clip.w, clip.h);
+            ctx.clip();
+
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = withAlpha(theme.accentColor, 1);
+            ctx.beginPath();
+
+            for (const key of selectedCells) {
+                const commaIdx = key.indexOf(",");
+                const col = Number(key.slice(0, commaIdx));
+                const row = Number(key.slice(commaIdx + 1));
+
+                if (col >= mappedColumns.length || row >= rows || row < 0 || col < 0) continue;
+
+                const bounds = computeBounds(
+                    col,
+                    row,
+                    width,
+                    height,
+                    groupHeaderHeight,
+                    totalHeaderHeight,
+                    cellXOffset,
+                    cellYOffset,
+                    translateX,
+                    translateY,
+                    rows,
+                    freezeColumns,
+                    freezeTrailingRows,
+                    mappedColumns,
+                    rowHeight
+                );
+
+                // Skip if completely outside the clip region
+                if (
+                    bounds.x + bounds.width < clip.x ||
+                    bounds.x > clip.x + clip.w ||
+                    bounds.y + bounds.height < clip.y ||
+                    bounds.y > clip.y + clip.h
+                )
+                    continue;
+
+                const x = bounds.x + 0.5;
+                const y = bounds.y + 0.5;
+                const w = bounds.width - 1;
+                const h = bounds.height - 1;
+
+                // Top edge exposed
+                if (!selectedCells.has(`${col},${row - 1}`)) {
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + w, y);
+                }
+                // Bottom edge exposed
+                if (!selectedCells.has(`${col},${row + 1}`)) {
+                    ctx.moveTo(x, y + h);
+                    ctx.lineTo(x + w, y + h);
+                }
+                // Left edge exposed
+                if (!selectedCells.has(`${col - 1},${row}`)) {
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x, y + h);
+                }
+                // Right edge exposed
+                if (!selectedCells.has(`${col + 1},${row}`)) {
+                    ctx.moveTo(x + w, y);
+                    ctx.lineTo(x + w, y + h);
+                }
+            }
+
+            ctx.stroke();
+            ctx.restore();
+        }
+    };
+
+    drawContourEdges();
+    return drawContourEdges;
+}
+
 export function drawColumnResizeOutline(
     ctx: CanvasRenderingContext2D,
     yOffset: number,

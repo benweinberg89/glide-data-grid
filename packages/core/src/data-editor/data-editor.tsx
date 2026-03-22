@@ -1213,6 +1213,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
     // Anchor overlay editor to its cell after scroll re-render, so getBounds has the correct scroll position
     const editorAnchorToCell = experimental?.editorAnchorToCell;
     const editorFlipHorizontal = experimental?.editorFlipHorizontal ?? false;
+    const mergedSelectionRing = experimental?.mergedSelectionRing ?? false;
     const closeEditorOnScrollRaw = experimental?.closeEditorOnScroll;
     const closeEditorOnScroll = closeEditorOnScrollRaw !== undefined && closeEditorOnScrollRaw !== false;
     const closeEditorOnScrollIgnore = typeof closeEditorOnScrollRaw === "object" ? closeEditorOnScrollRaw.ignoreSelector : undefined;
@@ -1373,6 +1374,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
     // this will generally be undefined triggering the memo less often
     const highlightRange =
         drawSelectionRing &&
+        !mergedSelectionRing &&
         gridSelection.current !== undefined &&
         gridSelection.current.range.width * gridSelection.current.range.height > 1
             ? gridSelection.current.range

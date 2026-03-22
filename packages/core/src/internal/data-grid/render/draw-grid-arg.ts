@@ -80,4 +80,5 @@ export interface DrawGridArg {
     readonly getCellRenderer: GetCellRendererCallback;
     readonly minimumCellWidth: number;
     readonly resizeIndicator: "full" | "header" | "none";
+    readonly mergedSelectionRing: boolean;
 }

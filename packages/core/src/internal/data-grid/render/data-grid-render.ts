@@ -11,7 +11,7 @@ import { drawCells } from "./data-grid-render.cells.js";
 import { drawGridHeaders } from "./data-grid-render.header.js";
 import { drawGridLines, overdrawStickyBoundaries, drawBlanks, drawExtraRowThemes } from "./data-grid-render.lines.js";
 import { blitLastFrame, blitResizedCol, computeCanBlit } from "./data-grid-render.blit.js";
-import { drawHighlightRings, drawFillHandle, drawColumnResizeOutline } from "./data-grid.render.rings.js";
+import { drawHighlightRings, drawMergedSelectionRing, drawFillHandle, drawColumnResizeOutline } from "./data-grid.render.rings.js";
 
 // Future optimization opportunities
 // - Create a cache of a buffer used to render the full view of a partially displayed column so that when
@@ -166,6 +166,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         damage,
         minimumCellWidth,
         resizeIndicator,
+        mergedSelectionRing,
     } = arg;
     if (width === 0 || height === 0) return;
     const dpr = Math.min(maxScaleFactor, Math.ceil(window.devicePixelRatio ?? 1));
@@ -452,6 +453,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
                 getCellRenderer,
                 overrideCursor,
                 minimumCellWidth,
+                mergedSelectionRing,
                 damageRects
             );
 
@@ -506,6 +508,27 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
                 highlightRegionsEffective,
                 theme
             );
+
+            if (mergedSelectionRing) {
+                drawMergedSelectionRing(
+                    ctx,
+                    width,
+                    height,
+                    cellXOffset,
+                    cellYOffset,
+                    translateX,
+                    translateY,
+                    mappedColumns,
+                    freezeColumns,
+                    headerHeight,
+                    groupHeaderHeight,
+                    rowHeight,
+                    freezeTrailingRows,
+                    rows,
+                    selection,
+                    theme
+                );
+            }
 
             const selectionCurrent = selection.current;
 
@@ -652,6 +675,27 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         theme
     );
 
+    const contourRedraw = mergedSelectionRing
+        ? drawMergedSelectionRing(
+              targetCtx,
+              width,
+              height,
+              cellXOffset,
+              cellYOffset,
+              translateX,
+              translateY,
+              mappedColumns,
+              freezeColumns,
+              headerHeight,
+              groupHeaderHeight,
+              rowHeight,
+              freezeTrailingRows,
+              rows,
+              selection,
+              theme
+          )
+        : undefined;
+
     // the overdraw may have nuked out our focus ring right edge.
     const focusRedraw = drawFocusEffective
         ? drawFillHandle(
@@ -727,7 +771,8 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         renderStateProvider,
         getCellRenderer,
         overrideCursor,
-        minimumCellWidth
+        minimumCellWidth,
+        mergedSelectionRing
     );
 
     drawBlanks(
@@ -791,6 +836,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
     );
 
     highlightRedraw?.();
+    contourRedraw?.();
     focusRedraw?.();
 
     if (isResizing && resizeIndicator !== "none") {

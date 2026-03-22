@@ -109,6 +109,7 @@ export function drawCells(
     getCellRenderer: GetCellRendererCallback,
     overrideCursor: (cursor: React.CSSProperties["cursor"]) => void,
     minimumCellWidth: number,
+    mergedSelectionRing?: boolean,
     damageRects?: Rectangle[]
 ): Rectangle[] | undefined {
     let toDraw = damage?.size ?? Number.MAX_SAFE_INTEGER;
@@ -293,6 +294,9 @@ export function drawCells(
                     if (!isSelected) {
                         if (rowSelected) accentCount++;
                         if (colSelected && !isTrailingRow) accentCount++;
+                    }
+                    if (mergedSelectionRing === true && accentCount > 1) {
+                        accentCount = 1;
                     }
 
                     const bgCell = cell.kind === GridCellKind.Protected ? theme.bgCellMedium : theme.bgCell;

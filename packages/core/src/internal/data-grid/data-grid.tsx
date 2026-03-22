@@ -293,6 +293,10 @@ export interface DataGridProps {
                * portaled elements matching that CSS selector (e.g. dropdown menus rendered
                * outside the overlay DOM tree). */
               readonly closeEditorOnScroll?: boolean | { readonly ignoreSelector?: string };
+              /** When true, multi-rect selections are rendered with a single merged contour
+               * instead of per-rect rings. Prevents alpha stacking on overlapping ranges and
+               * strokes only the outer boundary of the union. */
+              readonly mergedSelectionRing?: boolean;
           }
         | undefined;
 
@@ -878,6 +882,7 @@ const DataGrid: React.ForwardRefRenderFunction<DataGridRef, DataGridProps> = (p,
             getCellRenderer,
             minimumCellWidth,
             resizeIndicator,
+            mergedSelectionRing: experimental?.mergedSelectionRing ?? false,
         };
 
         // This confusing bit of code due to some poor design. Long story short, the damage property is only used
