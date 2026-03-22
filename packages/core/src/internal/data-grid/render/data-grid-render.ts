@@ -509,6 +509,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
                 theme
             );
 
+            // Redraw merged contour over damaged cells
             if (mergedSelectionRing) {
                 drawMergedSelectionRing(
                     ctx,
@@ -675,6 +676,8 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         theme
     );
 
+    // When mergedSelectionRing is enabled, draw a single contour around the union of
+    // all selected ranges instead of per-rect outlines from drawHighlightRings.
     const contourRedraw = mergedSelectionRing
         ? drawMergedSelectionRing(
               targetCtx,
@@ -835,6 +838,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         theme
     );
 
+    // Redraw overlays in order: highlight rings → merged contour → focus ring
     highlightRedraw?.();
     contourRedraw?.();
     focusRedraw?.();

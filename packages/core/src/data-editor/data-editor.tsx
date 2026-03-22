@@ -3909,6 +3909,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                     for (const [row, dataRow] of data.entries()) {
                         if (row + targetRow >= rows) break;
                         for (const [col, dataItem] of dataRow.entries()) {
+                            // Skip-cells from merged-range copy: leave existing content unchanged
                             if (dataItem.format === "skip") continue;
                             const index = [col + targetCol, row + targetRow] as const;
                             const [writeCol, writeRow] = index;
@@ -3986,11 +3987,15 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                 if (gridSelection.current !== undefined) {
                     const { range: primaryRange, rangeStack } = gridSelection.current;
 
-                    // Multi-range copy when mergedSelectionRing is enabled and rangeStack has entries.
+                    // Multi-range copy: when mergedSelectionRing is enabled and rangeStack has entries,
+                    // copy all selected ranges together. Two modes:
+                    //   "enclosing-rect" (default): copy bounding box, unselected holes become skip-cells
+                    //     that are transparent on GDG paste (empty on external paste)
+                    //   "compact": concatenate only selected rows without gaps (requires same column span)
                     if (mergedSelectionRing && rangeStack.length > 0) {
                         const allRanges = [...rangeStack, primaryRange];
 
-                        // Compute bounding rect of all ranges
+                        // Bounding rectangle across all ranges — defines the copy grid dimensions
                         let minCol = primaryRange.x;
                         let minRow = primaryRange.y;
                         let maxCol = primaryRange.x + primaryRange.width;
@@ -4003,7 +4008,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                         }
                         const boundWidth = maxCol - minCol;
 
-                        // Build set of selected cells for membership checks
+                        // Set of "col,row" keys for O(1) membership checks (selected vs hole)
                         const selectedCells = new Set<string>();
                         for (const r of allRanges) {
                             for (let col = r.x; col < r.x + r.width; col++) {
@@ -4013,6 +4018,8 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                             }
                         }
 
+                        // Skip-cells represent holes in the selection. They copy as empty
+                        // to the clipboard but are tagged so GDG paste skips them.
                         const skipCell: GridCell = {
                             kind: GridCellKind.Text,
                             data: "",

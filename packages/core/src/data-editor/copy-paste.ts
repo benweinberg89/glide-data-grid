@@ -23,6 +23,10 @@ type BasicCellBuffer = {
 export type CellBuffer = StringArrayCellBuffer | BasicCellBuffer;
 export type CopyBuffer = CellBuffer[][];
 
+// Sentinel value for "hole" cells in merged-range copy. The null-character prefix
+// ensures it won't collide with real cell data. Cells with this marker are written
+// as empty in the clipboard (for external app compatibility) but tagged with
+// gdg-skip in the HTML so GDG-to-GDG paste can skip them and preserve existing content.
 export const COPY_SKIP_MARKER = "\x00gdg-skip";
 
 function convertCellToBuffer(cell: GridCell): CellBuffer {
@@ -188,6 +192,7 @@ function createHtmlBuffer(copyBuffer: CopyBuffer): string {
     for (const row of copyBuffer) {
         lines.push("<tr>");
         for (const cell of row) {
+            // Hole cells: empty <td> for external apps, gdg-skip attr for GDG paste to skip
             if (cell.format === "skip") {
                 lines.push(`<td gdg-skip="true"></td>`);
                 continue;
@@ -269,7 +274,8 @@ export function decodeHTML(html: string): CopyBuffer | undefined {
             current = [];
             walkEl.push(...[...el.children].reverse());
         } else if (el instanceof HTMLTableCellElement) {
-            // Skip cells marked as holes from merged selection copy
+            // Hole cells from merged-range copy: decode as "skip" format so the paste
+            // handler leaves existing cell content unchanged instead of overwriting.
             if (el.getAttribute("gdg-skip") === "true") {
                 current?.push({ rawValue: "", formatted: "", format: "skip" });
                 continue;

@@ -295,6 +295,8 @@ export function drawCells(
                         if (rowSelected) accentCount++;
                         if (colSelected && !isTrailingRow) accentCount++;
                     }
+                    // When mergedSelectionRing is enabled, cap at 1 so overlapping ranges
+                    // produce a uniform fill instead of stacking semi-transparent layers.
                     if (mergedSelectionRing === true && accentCount > 1) {
                         accentCount = 1;
                     }

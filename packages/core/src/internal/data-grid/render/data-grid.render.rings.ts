@@ -210,6 +210,17 @@ export function drawHighlightRings(
     return drawCb;
 }
 
+/**
+ * Draws a single contour border around the union of all selected cells (range + rangeStack).
+ * Instead of drawing per-rect outlines that cause alpha stacking on overlaps, this flattens
+ * all ranges into a cell set and strokes only the "exposed" edges — edges where the adjacent
+ * cell is NOT selected. The result is one clean outline around the entire selection shape.
+ *
+ * Drawing is split into clip regions (scrollable area, frozen columns, frozen trailing rows)
+ * to prevent contour lines from bleeding across freeze boundaries.
+ *
+ * Returns a callback to redraw the contour (used during damage repaints).
+ */
 export function drawMergedSelectionRing(
     ctx: CanvasRenderingContext2D,
     width: number,
@@ -231,12 +242,12 @@ export function drawMergedSelectionRing(
     if (selection.current === undefined) return undefined;
 
     const { range, rangeStack } = selection.current;
-    // Only draw contour when there's a multi-cell selection
+    // Single-cell selections use the regular focus ring; contour is only for multi-cell
     if (range.width * range.height <= 1 && rangeStack.length === 0) return undefined;
 
     const allRanges = rangeStack.length > 0 ? [range, ...rangeStack] : [range];
 
-    // Build set of all selected cells
+    // Flatten all ranges into a Set of "col,row" keys for O(1) edge-exposure checks
     const selectedCells = new Set<string>();
     for (const r of allRanges) {
         for (let col = r.x; col < r.x + r.width; col++) {
@@ -252,7 +263,8 @@ export function drawMergedSelectionRing(
     const freezeLeft = getStickyWidth(mappedColumns);
     const freezeBottom = getFreezeTrailingHeight(rows, freezeTrailingRows, rowHeight);
 
-    // Define clip regions for freeze-aware drawing
+    // Separate clip regions prevent contour lines from drawing across freeze boundaries.
+    // Each region is drawn independently with its own canvas clip.
     const clipRegions: { x: number; y: number; w: number; h: number }[] = [
         // Scrollable data area
         {
@@ -323,10 +335,14 @@ export function drawMergedSelectionRing(
                 )
                     continue;
 
+                // 0.5px offset for crisp 1px lines on pixel boundaries
                 const x = bounds.x + 0.5;
                 const y = bounds.y + 0.5;
                 const w = bounds.width - 1;
                 const h = bounds.height - 1;
+
+                // An edge is "exposed" if the adjacent cell in that direction is not selected.
+                // Only exposed edges are drawn, forming the outer contour of the union.
 
                 // Top edge exposed
                 if (!selectedCells.has(`${col},${row - 1}`)) {
