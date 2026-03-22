@@ -295,10 +295,12 @@ export function drawCells(
                         if (rowSelected) accentCount++;
                         if (colSelected && !isTrailingRow) accentCount++;
                     }
-                    // When mergedSelectionRing is enabled, cap at 1 so overlapping ranges
-                    // produce a uniform fill instead of stacking semi-transparent layers.
+                    // When mergedSelectionRing is enabled, prevent range-on-range and
+                    // col-on-range stacking (which causes darker overlaps), but allow
+                    // row+range to stack so row-selected cells are visually distinct.
                     if (mergedSelectionRing === true && accentCount > 1) {
-                        accentCount = 1;
+                        const inRange = cellIsInRange(cellIndex, cell, selection, drawFocus) > 0 || isSelected;
+                        accentCount = rowSelected && inRange ? 2 : 1;
                     }
 
                     const bgCell = cell.kind === GridCellKind.Protected ? theme.bgCellMedium : theme.bgCell;
