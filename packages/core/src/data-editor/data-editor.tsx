@@ -1315,18 +1315,21 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
         if (!closeEditorOnScroll || overlay === undefined) return;
         const handler = (e: Event) => {
             const target = e.target;
-            if (target instanceof HTMLElement) {
-                // Ignore scroll events originating from the grid's own scroll container —
-                // those are handled by the visibleRegion-based effect above.
-                if (target.closest(".dvn-scroller") !== null) return;
-                // Ignore scroll events from inside the editor overlay itself
-                // (e.g. scrolling within a dropdown menu).
-                const overlayEl = document.getElementById(overlayID);
-                if (overlayEl !== null && overlayEl.contains(target)) return;
-                // Ignore scroll events from portaled elements matching the caller's selector
-                // (e.g. dropdown menus rendered outside the overlay DOM tree).
-                if (closeEditorOnScrollIgnore !== undefined && target.closest(closeEditorOnScrollIgnore) !== null) return;
-            }
+            // Ignore non-Element scroll targets (e.g. document) — these are
+            // typically incidental scrolls from browser focus management, not
+            // user-initiated page scrolls. The visibleRegion effect above
+            // already handles grid-internal scroll detection.
+            if (!(target instanceof HTMLElement)) return;
+            // Ignore scroll events originating from the grid's own scroll container —
+            // those are handled by the visibleRegion-based effect above.
+            if (target.closest(".dvn-scroller") !== null) return;
+            // Ignore scroll events from inside the editor overlay itself
+            // (e.g. scrolling within a dropdown menu).
+            const overlayEl = document.getElementById(overlayID);
+            if (overlayEl !== null && overlayEl.contains(target)) return;
+            // Ignore scroll events from portaled elements matching the caller's selector
+            // (e.g. dropdown menus rendered outside the overlay DOM tree).
+            if (closeEditorOnScrollIgnore !== undefined && target.closest(closeEditorOnScrollIgnore) !== null) return;
             onFinishEditingRef.current(undefined, [0, 0]);
         };
         window.addEventListener("scroll", handler, true);
