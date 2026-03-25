@@ -98,7 +98,8 @@ function drawMarkerRowCell(
     // to match column header behavior (which uses accentColor bg when selected).
     // Without this, the cell only gets accentLight (semi-transparent) from the
     // rendering pipeline, making white textHeaderSelected text look washed out.
-    if (highlighted) {
+    // Only apply for number/both markers — checkbox markers draw their own fill.
+    if (highlighted && markerKind !== "checkbox" && markerKind !== "checkbox-visible") {
         ctx.fillStyle = theme.accentColor;
         ctx.fillRect(x, y, width, height);
     }
