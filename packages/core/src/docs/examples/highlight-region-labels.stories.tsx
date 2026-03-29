@@ -64,3 +64,43 @@ export const HighlightRegionLabels: React.VFC = () => {
         />
     );
 };
+
+export const HighlightRegionLabelsCustomSize: React.VFC = () => {
+    const { cols, getCellContent } = useMockDataGenerator(6);
+
+    const highlights = React.useMemo<DataEditorProps["highlightRegions"]>(() => {
+        return [
+            {
+                color: "#3b82f622",
+                range: { x: 1, y: 2, width: 1, height: 1 },
+                style: "solid" as const,
+                label: "Alice",
+                labelOptions: { fontSize: 14 },
+            },
+            {
+                color: "#ef444422",
+                range: { x: 3, y: 5, width: 1, height: 1 },
+                style: "solid" as const,
+                label: "Bob",
+                labelOptions: { fontSize: 8 },
+            },
+            {
+                color: "#22c55e22",
+                range: { x: 0, y: 8, width: 1, height: 1 },
+                style: "solid" as const,
+                label: "Charlie",
+                labelOptions: { scaleWithCellWidth: true, minFontSize: 7, maxFontSize: 14 },
+            },
+        ];
+    }, []);
+
+    return (
+        <DataEditor
+            {...defaultProps}
+            highlightRegions={highlights}
+            getCellContent={getCellContent}
+            columns={cols}
+            rows={1000}
+        />
+    );
+};

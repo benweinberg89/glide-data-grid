@@ -1407,6 +1407,7 @@ const DataEditorImpl: React.ForwardRefRenderFunction<DataEditorRef, DataEditorPr
                         },
                         style: r.style,
                         label: r.label,
+                        labelOptions: r.labelOptions,
                     });
                 }
             }

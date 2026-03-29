@@ -53,11 +53,25 @@ export interface GroupDetails {
 export type GroupDetailsCallback = (groupName: string) => GroupDetails;
 export type GetRowThemeCallback = (row: number) => Partial<Theme> | undefined;
 
+export interface HighlightLabelOptions {
+    /** Font size in px. Drives pill height, padding, gap, radius. Default: 10 */
+    readonly fontSize?: number;
+    /** Scale font size proportionally to cell width. Default: false */
+    readonly scaleWithCellWidth?: boolean;
+    /** Min font size when scaling is active. Default: 6 */
+    readonly minFontSize?: number;
+    /** Max font size when scaling is active. Default: 16 */
+    readonly maxFontSize?: number;
+    /** Max characters before truncation. Default: 8 */
+    readonly maxLabelLength?: number;
+}
+
 export interface Highlight {
     readonly color: string;
     readonly range: Rectangle;
     readonly style?: "dashed" | "solid" | "no-outline" | "solid-outline" | "dashed-outline";
     readonly label?: string;
+    readonly labelOptions?: HighlightLabelOptions;
 }
 
 // preppable items:

@@ -88,6 +88,7 @@ export function drawHighlightRings(
             return {
                 color: h.color,
                 label: h.label,
+                labelOptions: h.labelOptions,
                 style,
                 clip: arg.clip,
                 rect: hugRectToTarget(
@@ -151,7 +152,8 @@ export function drawHighlightRings(
 
         // Draw labels (e.g. collaborator cursor names) on highlight regions
         // Group labels by cell position so multiple labels tile horizontally
-        const labelsByCell = new Map<string, { labels: { text: string; color: string }[]; x: number; y: number; w: number }>();
+        type LabelEntry = { text: string; color: string; labelOptions: Highlight["labelOptions"] };
+        const labelsByCell = new Map<string, { labels: LabelEntry[]; x: number; y: number; w: number }>();
         for (const dr of drawRects) {
             for (const s of dr) {
                 if (s?.rect === undefined || s.label === undefined || s.label === "") continue;
@@ -161,29 +163,53 @@ export function drawHighlightRings(
                     entry = { labels: [], x: s.rect.x, y: s.rect.y, w: s.rect.width };
                     labelsByCell.set(key, entry);
                 }
-                entry.labels.push({ text: s.label, color: s.color });
+                entry.labels.push({ text: s.label, color: s.color, labelOptions: s.labelOptions });
             }
         }
 
         if (labelsByCell.size > 0) {
-            const pillHeight = 16;
-            const pillPadX = 4;
-            const pillGap = 2;
-            const maxLabelLen = 8;
-            ctx.font = "bold 10px sans-serif";
+            const REFERENCE_CELL_WIDTH = 100;
             ctx.textBaseline = "middle";
 
             for (const entry of labelsByCell.values()) {
+                // Resolve effective font size for a label, applying cell-width scaling if enabled
+                const resolveFontSize = (opts: Highlight["labelOptions"]): number => {
+                    const base = opts?.fontSize ?? 10;
+                    if (!opts?.scaleWithCellWidth) return base;
+                    const scale = entry.w / REFERENCE_CELL_WIDTH;
+                    const scaled = base * scale;
+                    const min = opts.minFontSize ?? 6;
+                    const max = opts.maxFontSize ?? 16;
+                    return Math.max(min, Math.min(max, Math.round(scaled)));
+                };
+
+                // First pass: find max pill height for clip rect
+                let maxPillH = 0;
+                for (const lbl of entry.labels) {
+                    const fs = resolveFontSize(lbl.labelOptions);
+                    const ph = fs * 1.6;
+                    if (ph > maxPillH) maxPillH = ph;
+                }
+
                 let drawX = entry.x + entry.w; // start at top-right of cell
                 const drawY = entry.y;
 
                 ctx.save();
                 ctx.beginPath();
-                ctx.rect(entry.x, drawY, entry.w, pillHeight + 2);
+                ctx.rect(entry.x, drawY, entry.w, maxPillH + 2);
                 ctx.clip();
 
                 for (let i = entry.labels.length - 1; i >= 0; i--) {
                     const lbl = entry.labels[i];
+                    const opts = lbl.labelOptions;
+                    const fontSize = resolveFontSize(opts);
+                    const pillHeight = fontSize * 1.6;
+                    const pillPadX = fontSize * 0.4;
+                    const pillGap = fontSize * 0.2;
+                    const cornerRadius = fontSize * 0.3;
+                    const maxLabelLen = opts?.maxLabelLength ?? 8;
+
+                    ctx.font = `bold ${fontSize}px sans-serif`;
                     const truncated = lbl.text.length > maxLabelLen ? lbl.text.slice(0, maxLabelLen) : lbl.text;
                     const textW = ctx.measureText(truncated).width;
                     const pillW = textW + pillPadX * 2;
@@ -193,7 +219,7 @@ export function drawHighlightRings(
                     // Background pill
                     ctx.fillStyle = withAlpha(lbl.color, 1);
                     ctx.beginPath();
-                    ctx.roundRect(drawX, drawY, pillW, pillHeight, 3);
+                    ctx.roundRect(drawX, drawY, pillW, pillHeight, cornerRadius);
                     ctx.fill();
 
                     // White text
