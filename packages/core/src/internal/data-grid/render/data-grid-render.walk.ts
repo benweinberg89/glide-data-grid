@@ -143,6 +143,32 @@ export function walkGroups(
     }
 }
 
+export function getRowSpanBounds(
+    rowSpan: readonly [number, number],
+    row: number,
+    drawY: number,
+    rh: number,
+    getRowHeight: (row: number) => number
+): { cellY: number; cellHeight: number } {
+    const [startRow, endRow] = rowSpan;
+    let cellY = drawY;
+    let cellHeight = rh;
+
+    // Expand upward from current row to startRow
+    for (let r = row - 1; r >= startRow; r--) {
+        const h = getRowHeight(r);
+        cellY -= h;
+        cellHeight += h;
+    }
+
+    // Expand downward from current row to endRow
+    for (let r = row + 1; r <= endRow; r++) {
+        cellHeight += getRowHeight(r);
+    }
+
+    return { cellY, cellHeight };
+}
+
 export function getSpanBounds(
     span: Item,
     cellX: number,

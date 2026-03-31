@@ -32,7 +32,7 @@ import type { RenderStateProvider } from "../../../common/render-state-provider.
 import type { ImageWindowLoader } from "../image-window-loader-interface.js";
 import { intersectRect } from "../../../common/math.js";
 import type { GridMouseGroupHeaderEventArgs } from "../event-args.js";
-import { getSkipPoint, getSpanBounds, walkColumns, walkRowsInCol } from "./data-grid-render.walk.js";
+import { getRowSpanBounds, getSkipPoint, getSpanBounds, walkColumns, walkRowsInCol } from "./data-grid-render.walk.js";
 
 const loadingCell: InnerGridCell = {
     kind: GridCellKind.Loading,
@@ -136,6 +136,7 @@ export function drawCells(
         freezeTrailingRows > 0 ? getFreezeTrailingHeight(rows, freezeTrailingRows, getRowHeight) : 0;
     let result: Rectangle[] | undefined;
     let handledSpans: Set<string> | undefined = undefined;
+    let handledRowSpans: Set<string> | undefined = undefined;
 
     const skipPoint = getSkipPoint(drawRegions);
 
@@ -237,9 +238,62 @@ export function drawCells(
                     const cell: InnerGridCell = row < rows ? getCellContent(cellIndex) : loadingCell;
 
                     let cellX = drawX;
+                    let cellY = drawY;
+                    let cellHeight = rh;
                     let cellWidth = c.width;
                     let drawingSpan = false;
+                    let drawingRowSpan = false;
                     let skipContents = false;
+
+                    // When a cell has both span and rowSpan, check span dedup BEFORE
+                    // the rowSpan block modifies canvas state. Without this, the rowSpan
+                    // block pops the column clip, then the span block's early return
+                    // skips cleanup — corrupting the clip state for subsequent cells.
+                    if (cell.span !== undefined && cell.rowSpan !== undefined) {
+                        const spanKey = `${row},${cell.span[0]},${cell.span[1]},${c.sticky}`;
+                        if (handledSpans !== undefined && handledSpans.has(spanKey)) {
+                            toDraw--;
+                            return;
+                        }
+                    }
+
+                    if (cell.rowSpan !== undefined) {
+                        const [startRow, endRow] = cell.rowSpan;
+                        const rowSpanKey = `${c.sourceIndex},${startRow},${endRow}`;
+                        if (handledRowSpans === undefined) handledRowSpans = new Set();
+                        if (!handledRowSpans.has(rowSpanKey)) {
+                            handledRowSpans.add(rowSpanKey);
+                            const bounds = getRowSpanBounds(cell.rowSpan, row, drawY, rh, getRowHeight);
+                            cellY = bounds.cellY;
+                            cellHeight = bounds.cellHeight;
+
+                            ctx.restore();
+                            prepResult = undefined;
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.rect(cellX, cellY, cellWidth, cellHeight);
+                            // Only push to result (for grid line clipping) if there's no
+                            // column span — when both span+rowSpan exist, the span block
+                            // will push the correct combined rectangle.
+                            if (cell.span === undefined) {
+                                if (result === undefined) {
+                                    result = [];
+                                }
+                                result.push({
+                                    x: cellX,
+                                    y: cellY,
+                                    width: cellWidth,
+                                    height: cellHeight,
+                                });
+                            }
+                            ctx.clip();
+                            drawingRowSpan = true;
+                        } else {
+                            toDraw--;
+                            return;
+                        }
+                    }
+
                     if (cell.span !== undefined) {
                         const [startCol, endCol] = cell.span;
                         const spanKey = `${row},${startCol},${endCol},${c.sticky}`; //alloc
@@ -254,20 +308,33 @@ export function drawCells(
                                 cellX = area.x;
                                 cellWidth = area.width;
                                 handledSpans.add(spanKey);
+                                // When both span+rowSpan exist, register dedup keys for all
+                                // other rows/cols in the combined area. Without this, the
+                                // evenodd clip receives duplicate rects that cancel out.
+                                if (cell.rowSpan !== undefined) {
+                                    const [rs, re] = cell.rowSpan;
+                                    for (let r = rs; r <= re; r++) {
+                                        handledSpans.add(`${r},${startCol},${endCol},${c.sticky}`);
+                                    }
+                                    for (let col = startCol; col <= endCol; col++) {
+                                        if (handledRowSpans === undefined) handledRowSpans = new Set();
+                                        handledRowSpans.add(`${col},${rs},${re}`);
+                                    }
+                                }
                                 ctx.restore();
                                 prepResult = undefined;
                                 ctx.save();
                                 ctx.beginPath();
                                 const d = Math.max(0, clipX - area.x);
-                                ctx.rect(area.x + d, drawY, area.width - d, rh);
+                                ctx.rect(area.x + d, cellY, area.width - d, cellHeight);
                                 if (result === undefined) {
                                     result = [];
                                 }
                                 result.push({
                                     x: area.x + d,
-                                    y: drawY,
+                                    y: cellY,
                                     width: area.width - d,
-                                    height: rh,
+                                    height: cellHeight,
                                 });
                                 ctx.clip();
                                 drawingSpan = true;
@@ -302,7 +369,12 @@ export function drawCells(
                     } else if (isSelected && drawFocus) {
                         accentCount = Math.max(accentCount, 1);
                     }
-                    if (spanIsHighlighted) {
+                    const rowSpanIsHighlighted =
+                        cell.rowSpan !== undefined &&
+                        selection.rows.some(
+                            index => cell.rowSpan !== undefined && index >= cell.rowSpan[0] && index <= cell.rowSpan[1] //alloc
+                        );
+                    if (spanIsHighlighted || rowSpanIsHighlighted) {
                         accentCount++;
                     }
                     if (!isSelected) {
@@ -358,10 +430,10 @@ export function drawCells(
                     let didDamageClip = false;
                     if (damage !== undefined) {
                         // Clip to full cell bounds during damage repaints
-                        const top = drawY;
+                        const top = cellY;
                         const bottom = isSticky
-                            ? top + rh
-                            : Math.min(top + rh, height - freezeTrailingRowsHeight);
+                            ? top + cellHeight
+                            : Math.min(top + cellHeight, height - freezeTrailingRowsHeight);
                         const h = bottom - top;
 
                         didDamageClip = true;
@@ -389,9 +461,9 @@ export function drawCells(
                             prepResult.fillStyle = fill;
                         }
                         if (damage !== undefined) {
-                            ctx.fillRect(cellX, drawY, cellWidth, rh);
+                            ctx.fillRect(cellX, cellY, cellWidth, cellHeight);
                         } else {
-                            ctx.fillRect(cellX, drawY, cellWidth, rh);
+                            ctx.fillRect(cellX, cellY, cellWidth, cellHeight);
                         }
                     }
 
@@ -422,9 +494,9 @@ export function drawCells(
                             isLastColumn,
                             isLastRow,
                             cellX,
-                            drawY,
+                            cellY,
                             cellWidth,
-                            rh,
+                            cellHeight,
                             accentCount > 0,
                             theme,
                             fill ?? theme.bgCell,
@@ -452,7 +524,7 @@ export function drawCells(
                     }
 
                     toDraw--;
-                    if (drawingSpan) {
+                    if (drawingSpan || drawingRowSpan) {
                         ctx.restore();
                         prepResult?.deprep?.(deprepArg);
                         prepResult = undefined;

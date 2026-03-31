@@ -76,13 +76,21 @@ export function isGroupEqual(left: string | undefined, right: string | undefined
 export function cellIsSelected(location: Item, cell: InnerGridCell, selection: GridSelection): boolean {
     if (selection.current === undefined) return false;
 
-    if (location[1] !== selection.current.cell[1]) return false;
+    const [selCol, selRow] = selection.current.cell;
 
-    if (cell.span === undefined) {
-        return selection.current.cell[0] === location[0];
+    // Check row match (accounting for rowSpan)
+    if (cell.rowSpan !== undefined) {
+        if (selRow < cell.rowSpan[0] || selRow > cell.rowSpan[1]) return false;
+    } else {
+        if (location[1] !== selRow) return false;
     }
 
-    return selection.current.cell[0] >= cell.span[0] && selection.current.cell[0] <= cell.span[1];
+    // Check column match (accounting for span)
+    if (cell.span !== undefined) {
+        return selCol >= cell.span[0] && selCol <= cell.span[1];
+    }
+
+    return selCol === location[0];
 }
 
 export function itemIsInRect(location: Item, rect: Rectangle): boolean {
@@ -106,7 +114,13 @@ function cellIsInRect(location: Item, cell: InnerGridCell, rect: Rectangle): boo
     const endY = rect.y + rect.height - 1;
 
     const [cellCol, cellRow] = location;
-    if (cellRow < startY || cellRow > endY) return false;
+
+    // Check row match (accounting for rowSpan)
+    if (cell.rowSpan !== undefined) {
+        if (cell.rowSpan[1] < startY || cell.rowSpan[0] > endY) return false;
+    } else {
+        if (cellRow < startY || cellRow > endY) return false;
+    }
 
     if (cell.span === undefined) {
         return cellCol >= startX && cellCol <= endX;

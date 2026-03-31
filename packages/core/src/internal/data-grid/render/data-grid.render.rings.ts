@@ -5,7 +5,7 @@ import { getStickyWidth, type MappedGridColumn, computeBounds, getFreezeTrailing
 import { type FullTheme } from "../../../common/styles.js";
 import { blend, withAlpha } from "../color-parser.js";
 import { hugRectToTarget, intersectRect, rectContains, splitRectIntoRegions } from "../../../common/math.js";
-import { getSpanBounds, walkColumns, walkRowsInCol } from "./data-grid-render.walk.js";
+import { getRowSpanBounds, getSpanBounds, walkColumns, walkRowsInCol } from "./data-grid-render.walk.js";
 import { type Highlight } from "./data-grid-render.cells.js";
 
 export function drawHighlightRings(
@@ -502,7 +502,15 @@ export function drawFillHandle(
                     if (row !== targetRow && row !== fillHandleRow) return;
 
                     let cellX = drawX;
+                    let cellY = drawY;
                     let cellWidth = col.width;
+                    let cellHeight = rh;
+
+                    if (cell.rowSpan !== undefined) {
+                        const bounds = getRowSpanBounds(cell.rowSpan, row, drawY, rh, getRowHeight);
+                        cellY = bounds.cellY;
+                        cellHeight = bounds.cellHeight;
+                    }
 
                     if (cell.span !== undefined) {
                         const areas = getSpanBounds(cell.span, drawX, drawY, col.width, rh, col, allColumns);
@@ -531,7 +539,7 @@ export function drawFillHandle(
                             // plus any configured offsets (fill.offsetX, fill.offsetY).
                             // Offset by half pixel to align with grid lines.
                             const hx = cellX + cellWidth + fill.offsetX - half + 0.5;
-                            const hy = drawY + rh + fill.offsetY - half + 0.5;
+                            const hy = cellY + cellHeight + fill.offsetY - half + 0.5;
 
                             ctx.beginPath();
                             if (fill.shape === "circle") {

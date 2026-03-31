@@ -45,6 +45,25 @@ export const SpanCell: React.VFC = () => {
     const mangledGetCellContent = React.useCallback<typeof getCellContent>(
         cell => {
             const [col, row] = cell;
+            if (col === 0 && row >= 2 && row <= 4) {
+                return {
+                    kind: GridCellKind.Text,
+                    allowOverlay: false,
+                    data: "Row Span Cell",
+                    rowSpan: [2, 4],
+                    displayData: "Row Span Cell",
+                };
+            }
+            if (row >= 8 && row <= 9 && col >= 3 && col <= 4) {
+                return {
+                    kind: GridCellKind.Text,
+                    allowOverlay: false,
+                    data: "Span + Row Span Cell",
+                    span: [3, 4],
+                    rowSpan: [8, 9],
+                    displayData: "Span + Row Span Cell",
+                };
+            }
             if (row === 6 && col >= 3 && col <= 4) {
                 return {
                     kind: GridCellKind.Text,
