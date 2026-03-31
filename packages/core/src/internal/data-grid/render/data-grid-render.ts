@@ -417,7 +417,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
         const doDamage = (ctx: CanvasRenderingContext2D) => {
             const damageRects: Rectangle[] = [];
 
-            drawCells(
+            const damageSpans = drawCells(
                 ctx,
                 effectiveCols,
                 mappedColumns,
@@ -475,7 +475,7 @@ export function drawGrid(arg: DrawGridArg, lastArg: DrawGridArg | undefined) {
                     width,
                     height,
                     undefined,
-                    undefined,
+                    damageSpans,
                     groupHeaderHeight,
                     totalHeaderHeight,
                     getRowHeight,
